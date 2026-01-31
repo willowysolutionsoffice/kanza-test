@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getISTDateRangeForQuery } from "@/lib/date-utils";
 
 /**
@@ -18,7 +19,7 @@ export async function updateBalanceReceiptIST(
   branchId: string,
   date: Date,
   amountChange: number,
-  tx?: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  tx?: Prisma.TransactionClient,
   options?: BalanceReceiptOptions
 ) {
   const prismaClient = tx || prisma;
@@ -43,34 +44,55 @@ export async function updateBalanceReceiptIST(
     // For sales, we need to add yesterday's balance + cash payment to existing receipt
     if (amountChange > 0) {
       // This is a sale - optionally add yesterday's balance before incrementing
+      
       const previousBalance = carryForwardOnExisting
         ? await getPreviousDayBalanceIST(branchId, date, prismaClient)
         : 0;
-      const newAmount = existingReceipt.amount + previousBalance + amountChange;
+
+      let dataUpdate;
+      let propagationDelta = amountChange;
+      
+      if (previousBalance > 0) {
+        // Carry forward logic: Absolute set including previous balance
+        // Note: This specific case is not fully atomic regarding 'amount', 
+        // but solves the "Missing Base" problem.
+        dataUpdate = { amount: existingReceipt.amount + previousBalance + amountChange };
+        propagationDelta = previousBalance + amountChange;
+      } else {
+        // Pure increment - Atomic and Safe
+        dataUpdate = { amount: { increment: amountChange } };
+        // propagationDelta remains amountChange
+      }
       
       const result = await prismaClient.balanceReceipt.update({
         where: { id: existingReceipt.id },
-        data: {
-          amount: newAmount,
-        },
+        data: dataUpdate,
       });
+      
+      // Propagate the effective change to future dates
+      await propagateBalanceCorrection(branchId, date, propagationDelta, prismaClient);
+      
       return result;
     } else {
       // Normal update for expenses/credits/bank-deposits
+      // Use atomic increment (negative amountChange)
       const result = await prismaClient.balanceReceipt.update({
         where: { id: existingReceipt.id },
         data: {
-          amount: existingReceipt.amount + amountChange,
+          amount: { increment: amountChange },
         },
       });
+      
+      // Propagate change
+      await propagateBalanceCorrection(branchId, date, amountChange, prismaClient);
+      
       return result;
     }
   } else {
     // Create new receipt
     const previousBalance = await getPreviousDayBalanceIST(branchId, date, prismaClient);
     
-    // Create IST date for storage (previous day's 18:30:00.000Z represents IST midnight)
-    // For Sep 5 IST, we need Sep 4 18:30 UTC to represent Sep 5 00:00 IST
+    // Create IST date for storage
     const [year, month, day] = dateString.split('-').map(Number);
     const previousDay = new Date(year, month - 1, day - 1);
     const istDate = new Date(`${previousDay.getFullYear()}-${String(previousDay.getMonth() + 1).padStart(2, '0')}-${String(previousDay.getDate()).padStart(2, '0')}T18:30:00.000Z`);
@@ -79,21 +101,26 @@ export async function updateBalanceReceiptIST(
     let newAmount: number;
     if (amountChange < 0) {
       // For expenses/credits/bank-deposits (negative amountChange)
-      // If no previous balance receipt exists, start with 0 - amount (not previousBalance)
-      newAmount = 0 + amountChange; // This gives us 0 - amount
+      // If no previous balance receipt exists, start with 0 + amount
+      newAmount = 0 + amountChange; 
     } else {
       // For sales (positive amountChange)
-      // Use previous balance + current change
       newAmount = previousBalance + amountChange;
     }
     
     const result = await prismaClient.balanceReceipt.create({
       data: {
-        date: istDate, // Store in IST format (18:30:00.000Z)
+        date: istDate, 
         amount: newAmount,
         branchId,
       },
     });
+    
+    // Propagate the Gap Filling. 
+    // The previous effective balance for this missing day was '0' (or undefined).
+    // Now it is 'newAmount'. So the Delta experienced by future days is 'newAmount'.
+    await propagateBalanceCorrection(branchId, date, newAmount, prismaClient);
+    
     return result;
   }
 }
@@ -172,7 +199,7 @@ export async function updateBalanceReceiptForPaymentIST(
   branchId: string,
   date: Date,
   amountChange: number,
-  tx?: any // eslint-disable-line @typescript-eslint/no-explicit-any
+  tx?: Prisma.TransactionClient
 ) {
   const prismaClient = tx || prisma;
   
@@ -191,13 +218,15 @@ export async function updateBalanceReceiptForPaymentIST(
   });
 
   if (existingReceipt) {
-    // Update existing receipt with payment amount
+    // Update existing receipt with payment amount using atomic increment
     const result = await prismaClient.balanceReceipt.update({
       where: { id: existingReceipt.id },
       data: {
-        amount: existingReceipt.amount + amountChange,
+        amount: { increment: amountChange },
       },
     });
+    
+    await propagateBalanceCorrection(branchId, date, amountChange, prismaClient);
     return result;
   } else {
     // Create new receipt with only the payment amount (no yesterday's balance)
@@ -212,6 +241,43 @@ export async function updateBalanceReceiptForPaymentIST(
         branchId,
       },
     });
+    
+    // Propagate the new amount as the delta causing "creation" of balance
+    await propagateBalanceCorrection(branchId, date, amountChange, prismaClient);
     return result;
   }
+}
+
+/**
+ * Propagates a balance change to all future dates (Broken Chain Fix)
+ * If a transaction is added/edited in the past, this ensures the change
+ * ripples forward to all subsequent balance receipts.
+ */
+export async function propagateBalanceCorrection(
+  branchId: string,
+  transactionDate: Date,
+  amountChange: number,
+  tx?: Prisma.TransactionClient
+) {
+  const prismaClient = tx || prisma;
+
+  // 1. Get the IST date boundaries for the transaction date
+  const dateString = transactionDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const { end } = getISTDateRangeForQuery(dateString);
+
+  // 2. Find all receipts strictly AFTER this date
+  // We use updateMany for efficiency and atomicity.
+  await prismaClient.balanceReceipt.updateMany({
+    where: {
+      branchId,
+      date: {
+        gt: end, // Strictly greater than the transaction day's end
+      },
+    },
+    data: {
+      amount: {
+        increment: amountChange,
+      },
+    },
+  });
 }

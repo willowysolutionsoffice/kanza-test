@@ -29,7 +29,7 @@ export async function updateBalanceReceipt(
     const result = await prismaClient.balanceReceipt.update({
       where: { id: existingReceipt.id },
       data: {
-        amount: existingReceipt.amount + amountChange,
+        amount: { increment: amountChange },
       },
     });
     return result;
