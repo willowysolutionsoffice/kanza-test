@@ -357,6 +357,19 @@ model BalanceReceipt {
   updatedAt      DateTime @updatedAt
 }
 
+model ClosedDay {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  date      DateTime
+  reason    String?
+
+  branchId  String?  @db.ObjectId
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+
+  @@unique([date, branchId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Oil {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
 
@@ -476,10 +489,11 @@ model Branch {
   bank                Bank[]
   supplierPayment     SupplierPayment[]
   balanceReceipt      BalanceReceipt[]
-  bankDeposite       BankDeposite[]
+  bankDeposite        BankDeposite[]
   oil                 Oil[]
   supplier            Supplier[]
   product             Product[]
+  closedDay           ClosedDay[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

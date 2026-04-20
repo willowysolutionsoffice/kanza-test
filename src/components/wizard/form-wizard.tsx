@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ChevronLeft, ChevronRight, Check, CalendarIcon, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, CalendarIcon, Loader2, PowerOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -98,6 +98,9 @@ interface WizardContextType {
   setSelectedBranchId: React.Dispatch<React.SetStateAction<string>>;
   userRole?: string;
   userBranchId?: string;
+  // Pump closed flag
+  isPumpClosed: boolean;
+  setIsPumpClosed: React.Dispatch<React.SetStateAction<boolean>>;
   // Persistent data across steps
   addedExpenses: AddedExpense[];
   setAddedExpenses: React.Dispatch<React.SetStateAction<AddedExpense[]>>;
@@ -149,6 +152,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({
   const [onSaveAndNext, setOnSaveAndNext] = useState<(() => (() => Promise<boolean>)) | null>(null);
   const [isStepDisabled, setIsStepDisabled] = useState(false);
   const [isCurrentStepCompleted, setIsCurrentStepCompleted] = useState(false);
+  const [isPumpClosed, setIsPumpClosed] = useState(false);
   
   // Branch selection state
   const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
@@ -291,6 +295,9 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({
     setSelectedBranchId,
     userRole,
     userBranchId,
+    // Pump closed
+    isPumpClosed,
+    setIsPumpClosed,
     // Persistent data
     addedExpenses,
     setAddedExpenses,
@@ -600,6 +607,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mt-4">
               <CommonDatePicker />
               <BranchSelector />
+              <ClosedDayToggle />
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -703,5 +711,89 @@ const BranchSelector: React.FC = () => {
   );
 };
 
+// ClosedDayToggle Component
+const ClosedDayToggle: React.FC = () => {
+  const { commonDate, selectedBranchId, isPumpClosed, setIsPumpClosed } = useWizard();
+  const [loading, setLoading] = useState(false);
+  // Import toast dynamically to avoid SSR issues
+  const [toast, setToast] = useState<((msg: string) => void) | null>(null);
+
+  React.useEffect(() => {
+    import('sonner').then((mod) => {
+      setToast(() => mod.toast.success);
+    });
+  }, []);
+
+  // Check if this date is already closed when date or branch changes
+  React.useEffect(() => {
+    if (!selectedBranchId || !commonDate) return;
+    const y = commonDate.getFullYear();
+    const m = String(commonDate.getMonth() + 1).padStart(2, '0');
+    const d = String(commonDate.getDate()).padStart(2, '0');
+    const formatted = `${y}-${m}-${d}`;
+    fetch(`/api/closed-days?branchId=${selectedBranchId}&date=${formatted}`)
+      .then((r) => r.json())
+      .then((json) => {
+        setIsPumpClosed((json.data?.length ?? 0) > 0);
+      })
+      .catch(() => setIsPumpClosed(false));
+  }, [commonDate, selectedBranchId, setIsPumpClosed]);
+
+  const handleToggle = async () => {
+    if (!selectedBranchId) return;
+    setLoading(true);
+    try {
+      const y = commonDate.getFullYear();
+      const mo = String(commonDate.getMonth() + 1).padStart(2, '0');
+      const dy = String(commonDate.getDate()).padStart(2, '0');
+      const formatted = `${y}-${mo}-${dy}`;
+      if (isPumpClosed) {
+        // Unmark
+        await fetch(
+          `/api/closed-days?date=${formatted}&branchId=${selectedBranchId}`,
+          { method: 'DELETE' }
+        );
+        setIsPumpClosed(false);
+        toast?.('Day unmarked — pump is open');
+      } else {
+        // Mark as closed
+        await fetch('/api/closed-days', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: formatted, branchId: selectedBranchId, reason: 'Pump closed' }),
+        });
+        setIsPumpClosed(true);
+        toast?.(`Marked as closed for ${formatted}`);
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={loading || !selectedBranchId}
+      className={cn(
+        'flex items-center gap-2 h-9 px-4 rounded-md border text-sm font-medium transition-colors',
+        isPumpClosed
+          ? 'bg-red-100 border-red-400 text-red-700 hover:bg-red-200'
+          : 'bg-background border-input text-muted-foreground hover:bg-muted',
+        (loading || !selectedBranchId) && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      {loading ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <PowerOff className={cn('w-4 h-4', isPumpClosed ? 'text-red-600' : '')} />
+      )}
+      {isPumpClosed ? 'Closed' : 'Mark as Closed'}
+    </button>
+  );
+};
+
 // Export all components
-export { WizardNavigation, StepIndicator, ProgressBar, CommonDatePicker, BranchSelector };
+export { WizardNavigation, StepIndicator, ProgressBar, CommonDatePicker, BranchSelector, ClosedDayToggle };

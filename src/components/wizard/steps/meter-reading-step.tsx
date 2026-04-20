@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { ProductType } from '@/types/product';
-// import { Loader2 } from 'lucide-react'; // Unused import removed
+import { PowerOff } from 'lucide-react';
 
 type MachineWithNozzles = {
   id: string;
@@ -31,7 +31,7 @@ type BulkForm = z.infer<typeof bulkSchema>;
 
 export const MeterReadingStep: React.FC = () => {
   const { selectedBranchId } = useWizard();
-  const { markStepCompleted, markCurrentStepCompleted, currentStep, setOnSaveAndNext, setIsStepDisabled } = useWizard();
+  const { markStepCompleted, markCurrentStepCompleted, currentStep, setOnSaveAndNext, setIsStepDisabled, isPumpClosed } = useWizard();
   const [machines, setMachines] = useState<MachineWithNozzles[]>([]);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<ProductType[]>([]);
@@ -381,6 +381,14 @@ export const MeterReadingStep: React.FC = () => {
     }
   }, [isInitialized, form, submit, setOnSaveAndNext]);
   
+  // Auto-complete step when pump is closed
+  useEffect(() => {
+    if (isPumpClosed) {
+      markCurrentStepCompleted();
+      setIsStepDisabled(false);
+    }
+  }, [isPumpClosed, markCurrentStepCompleted, setIsStepDisabled]);
+
   return (
     <FormProvider {...form}>
       <Card>
@@ -388,6 +396,21 @@ export const MeterReadingStep: React.FC = () => {
           <CardTitle>Step 1: Meter Reading Form</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+
+          {/* Pump Closed Banner */}
+          {isPumpClosed && (
+            <div className="flex items-center gap-3 rounded-lg border border-red-300 bg-red-50 px-4 py-4 text-red-700">
+              <PowerOff className="w-5 h-5 shrink-0" />
+              <div>
+                <div className="font-semibold">Pump is closed on this date</div>
+                <div className="text-sm text-red-600 mt-0.5">
+                  No meter reading required. The opening reading for the next working day will carry forward automatically.
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Only show form when pump is open */}
+          {!isPumpClosed && (
           <form className="flex h-full flex-col">
             {/* Global controls */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -730,8 +753,10 @@ export const MeterReadingStep: React.FC = () => {
             </div>
 
           </form>
+          )}
 
           {/* Footer with Stock Display and Complete Button */}
+          {!isPumpClosed && (
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t">
             {/* Current Stock Display - Bottom Left */}
             <div className="p-3 bg-muted/50 rounded-lg border w-full sm:w-auto">
@@ -770,6 +795,7 @@ export const MeterReadingStep: React.FC = () => {
             </Button>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
     </FormProvider>
