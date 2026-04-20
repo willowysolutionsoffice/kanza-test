@@ -154,11 +154,9 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({
   const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
     // For non-admin users, use their assigned branch
     if (userRole?.toLowerCase() !== 'admin' && userBranchId) {
-      console.log('Wizard: Using user branch ID:', userBranchId);
       return userBranchId;
     }
     // For admin users, use the initial branch or first available
-    console.log('Wizard: Using initial branch ID:', initialBranchId);
     return initialBranchId || '';
   });
   
@@ -645,16 +643,13 @@ const BranchSelector: React.FC = () => {
       try {
         const response = await fetch('/api/branch');
         const data = await response.json();
-        console.log('Wizard: Fetched branches:', data.data);
         setBranches(data.data || []);
         
         // For non-admin users, ensure their branch is selected
         if (!isAdmin && userBranchId) {
-          console.log('Wizard: Setting non-admin user branch:', userBranchId);
           setSelectedBranchId(userBranchId);
         } else if (!selectedBranchId && data.data && data.data.length > 0 && isAdmin) {
           // For admin users, if no branch is selected, select the first one
-          console.log('Wizard: Auto-selecting first branch:', data.data[0]);
           setSelectedBranchId(data.data[0].id);
         }
       } catch (error) {
@@ -692,7 +687,6 @@ const BranchSelector: React.FC = () => {
         onChange={(e) => {
           // Only allow changes if user is admin
           if (isAdmin) {
-            console.log('Wizard: Branch selection changed to:', e.target.value);
             setSelectedBranchId(e.target.value);
           }
         }}

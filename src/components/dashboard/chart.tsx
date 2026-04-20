@@ -76,9 +76,6 @@ export function ChartAreaInteractive({ branchId }: { branchId?: string }) {
     return date >= startDate
   })
 
-  console.log(chartData);
-  
-
   return (
     <Card className="@container/card">
       <CardHeader>

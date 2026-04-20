@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
       const isApi = pathname.startsWith("/api");
       const isServerAction = request.headers.has("next-action");
       
-      if (isApi || isServerAction) {
+      if ((isApi || isServerAction) && request.method !== "GET") {
           const logType = isServerAction ? "SERVER_ACTION" : "API";
           // We must use fetch to call the API route because we are in Edge Runtime
           const logPromise = fetch(new URL("/api/logger", request.url), {

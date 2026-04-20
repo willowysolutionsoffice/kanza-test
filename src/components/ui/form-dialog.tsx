@@ -72,7 +72,6 @@ export function FormDialog<T extends FieldValues = FieldValues>({
   };
 
   const handleSubmit = (data: T) => {
-    console.log("📋 FormDialog handleSubmit called with data:", data);
     try {
       const result = onSubmit(data, () => handleOpenChange(false));
       // Handle async onSubmit
@@ -120,26 +119,13 @@ export function FormDialogContent({
       <Form {...context.form}>
         <form
           onSubmit={(e) => {
-            console.log("🔥 Form submit event triggered");
             e.preventDefault();
             context.form.handleSubmit(
               (data) => {
-                console.log("✅ Form validation passed, calling onSubmit with data:", data);
                 context.onSubmit(data);
               },
               (errors) => {
                 console.error("❌ Form validation failed with errors:", errors);
-                // Show validation errors
-                const errorMessages = Object.entries(errors)
-                  .map(([field, error]) => {
-                    const err = error as { message?: string };
-                    return `${field}: ${err?.message || "Invalid"}`;
-                  })
-                  .join("\n");
-                if (errorMessages) {
-                  console.error("Validation errors:", errorMessages);
-                  // The parent component should handle showing toast errors
-                }
               }
             )();
           }}
