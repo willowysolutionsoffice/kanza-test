@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { ObjectId } from "mongodb";
 import { bankDepositeSchemaWithId } from "@/schemas/bank-deposite-schema";
 import { NextResponse } from "next/server";
+import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,66 +105,35 @@ export async function PATCH(
         }
       }
 
-      // 3. Adjust BalanceReceipt
+      // 3. Adjust BalanceReceipt with IST-aware propagation
       if (oldDate.toDateString() === newDate.toDateString()) {
-        // Same date → adjust only by difference
-        const receipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: existingDeposite.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        if (receipt && difference !== 0) {
-          await tx.balanceReceipt.update({
-            where: { id: receipt.id },
-            data: {
-              amount:
-                difference > 0
-                  ? { decrement: difference } // deposit ↑ → cash ↓
-                  : { increment: Math.abs(difference) }, // deposit ↓ → cash ↑
-            },
-          });
+        // Same date → adjust only by difference (negative because deposit reduces cash)
+        if (difference !== 0 && existingDeposite.branchId) {
+          await updateBalanceReceiptIST(
+            existingDeposite.branchId,
+            oldDate,
+            -difference,
+            tx
+          );
         }
       } else {
         // Date changed → restore old, apply new
-        const oldReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: existingDeposite.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        const newReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: existingDeposite.branchId,
-            date: {
-              gte: new Date(newDate.setHours(0, 0, 0, 0)),
-              lte: new Date(newDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        // Restore old receipt (add back old deposit amount)
-        if (oldReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: oldReceipt.id },
-            data: { amount: { increment: oldAmount } },
-          });
-        }
-
-        // Apply new receipt (reduce by new deposit amount)
-        if (newReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: newReceipt.id },
-            data: { amount: { decrement: newAmount } },
-          });
+        if (existingDeposite.branchId) {
+          // Restore old (add back deposit amount)
+          await updateBalanceReceiptIST(
+            existingDeposite.branchId,
+            oldDate,
+            oldAmount,
+            tx
+          );
+          
+          // Apply new (subtract new deposit amount)
+          await updateBalanceReceiptIST(
+            existingDeposite.branchId,
+            newDate,
+            -newAmount,
+            tx
+          );
         }
       }
 
@@ -213,21 +183,13 @@ export async function DELETE(
       });
 
       // 3. Increment back in BalanceReceipt (since deletion cancels earlier decrement)
-      const existingReceipt = await tx.balanceReceipt.findFirst({
-        where: {
-          branchId: existingDeposite.branchId,
-          date: {
-            gte: new Date(depositDate.setHours(0, 0, 0, 0)),
-            lte: new Date(depositDate.setHours(23, 59, 59, 999)),
-          },
-        },
-      });
-
-      if (existingReceipt) {
-        await tx.balanceReceipt.update({
-          where: { id: existingReceipt.id },
-          data: { amount: { increment: existingDeposite.amount } },
-        });
+      if (existingDeposite.branchId) {
+        await updateBalanceReceiptIST(
+          existingDeposite.branchId,
+          depositDate,
+          existingDeposite.amount, // Refund the cash
+          tx
+        );
       }
 
       return [removedDeposit];

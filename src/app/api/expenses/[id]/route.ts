@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { expenseSchemaWithId } from "@/schemas/expense-schema";
+import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,66 +70,35 @@ export async function PATCH(
         }
       }
 
-      // 3. Adjust BalanceReceipt
+      // 3. Adjust BalanceReceipt with IST-aware propagation
       if (oldDate.toDateString() === newDate.toDateString()) {
-        // same date → just apply diff
-        const receipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: oldExpense.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        if (receipt && amountDiff !== 0) {
-          await tx.balanceReceipt.update({
-            where: { id: receipt.id },
-            data: {
-              amount:
-                amountDiff > 0
-                  ? { decrement: amountDiff }
-                  : { increment: Math.abs(amountDiff) },
-            },
-          });
+        // same date → apply diff (negative amountDiff because expense reduces cash)
+        if (amountDiff !== 0 && oldExpense.branchId) {
+          await updateBalanceReceiptIST(
+            oldExpense.branchId,
+            oldDate,
+            -amountDiff,
+            tx
+          );
         }
       } else {
-        // date changed → reverse from old receipt, apply to new receipt
-        const oldReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: oldExpense.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        const newReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: oldExpense.branchId,
-            date: {
-              gte: new Date(newDate.setHours(0, 0, 0, 0)),
-              lte: new Date(newDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        // 3a. Restore old receipt with full old amount
-        if (oldReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: oldReceipt.id },
-            data: { amount: { increment: oldExpense.amount } },
-          });
-        }
-
-        // 3b. Deduct new amount from new receipt
-        if (newReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: newReceipt.id },
-            data: { amount: { decrement: data.amount } },
-          });
+        // date changed → reverse from old, apply to new
+        if (oldExpense.branchId) {
+          // 3a. Restore old balance (add back old expense amount)
+          await updateBalanceReceiptIST(
+            oldExpense.branchId,
+            oldDate,
+            oldExpense.amount,
+            tx
+          );
+          
+          // 3b. Apply new balance (deduct new expense amount)
+          await updateBalanceReceiptIST(
+            oldExpense.branchId,
+            newDate,
+            -data.amount,
+            tx
+          );
         }
       }
 
@@ -199,22 +169,14 @@ export async function DELETE(
         });
       }
 
-      // 3. Increment back in BalanceReceipt
-      const existingReceipt = await tx.balanceReceipt.findFirst({
-        where: {
-          branchId: oldExpense.branchId,
-          date: {
-            gte: new Date(expenseDate.setHours(0, 0, 0, 0)),
-            lte: new Date(expenseDate.setHours(23, 59, 59, 999)),
-          },
-        },
-      });
-
-      if (existingReceipt) {
-        await tx.balanceReceipt.update({
-          where: { id: existingReceipt.id },
-          data: { amount: { increment: oldExpense.amount } }, // undo earlier decrement
-        });
+      // 3. Increment back in BalanceReceipt with IST propagation
+      if (oldExpense.branchId) {
+        await updateBalanceReceiptIST(
+          oldExpense.branchId,
+          expenseDate,
+          oldExpense.amount, // Add back the amount that was spent
+          tx
+        );
       }
 
       // 4. Refund Sale

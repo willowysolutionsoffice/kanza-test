@@ -71,6 +71,9 @@ export async function PATCH(
     const newCash = saleData.cashPayment ?? 0;
     const diff = newCash - oldCash; // +ve = more cash, -ve = less cash
 
+    const oldDate = new Date(existingSale.date);
+    const newDate = new Date(saleData.date);
+
     const [updatedSale] = await prisma.$transaction(async (tx) => {
       // 1. Update sale
       const updated = await tx.sale.update({
@@ -81,15 +84,36 @@ export async function PATCH(
         } as Prisma.SaleUpdateInput,
       });
 
-      // 2. Adjust BalanceReceipt using IST-aware logic (only if cashPayment changed)
-      if (diff !== 0 && existingSale.branchId) {
-        await updateBalanceReceiptIST(
-          existingSale.branchId, 
-          existingSale.date, 
-          diff, // Positive or negative amount change
-          tx,
-          { carryForwardOnExisting: false }
-        );
+      // 2. Adjust BalanceReceipt using IST-aware logic
+      if (existingSale.branchId) {
+        if (oldDate.toDateString() === newDate.toDateString()) {
+          // Same date → update balance by the difference
+          if (diff !== 0) {
+            await updateBalanceReceiptIST(
+              existingSale.branchId, 
+              existingSale.date, 
+              diff,
+              tx
+            );
+          }
+        } else {
+          // Date changed → restore entire amount to old receipt, deduct from new receipt
+          // 2a. Restore old balance (cancel the old cash payment)
+          await updateBalanceReceiptIST(
+            existingSale.branchId,
+            oldDate,
+            -oldCash,
+            tx
+          );
+          
+          // 2b. Deduct from new balance (add the new cash payment)
+          await updateBalanceReceiptIST(
+            existingSale.branchId,
+            newDate,
+            newCash,
+            tx
+          );
+        }
       }
 
       return [updated];
@@ -123,38 +147,13 @@ export async function DELETE(
         where: { id: saleId },
       });
 
-      // 2. Adjust BalanceReceipt using IST-aware logic (decrement entire amount that was added)
+      // 2. Adjust BalanceReceipt using IST-aware logic (remove the cash payment from the balance)
       if (existingSale.cashPayment && existingSale.branchId) {
-        // Get the previous day's balance to calculate the total amount that was added
-        const previousDay = new Date(existingSale.date);
-        previousDay.setDate(previousDay.getDate() - 1);
-        
-        // Get yesterday's balance receipt amount
-        const previousDateString = previousDay.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-        const { getISTDateRangeForQuery } = await import('@/lib/date-utils');
-        const { start, end } = getISTDateRangeForQuery(previousDateString);
-        
-        const previousReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: existingSale.branchId,
-            date: {
-              gte: start,
-              lte: end,
-            },
-          },
-          orderBy: { date: 'desc' },
-        });
-        
-        const previousBalance = previousReceipt?.amount || 0;
-        const totalAmountAdded = previousBalance + existingSale.cashPayment;
-        
-        // Decrement the entire amount that was added (yesterday's balance + cash payment)
         await updateBalanceReceiptIST(
           existingSale.branchId, 
           existingSale.date, 
-          -totalAmountAdded, // Negative amount to decrement the entire amount
-          tx,
-          { carryForwardOnExisting: false }
+          -existingSale.cashPayment, 
+          tx
         );
       }
     });

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { creditSchemaWithId } from "@/schemas/credit-schema";
+import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,66 +74,35 @@ export async function PATCH(
         }
       }
 
-      // 3. Adjust BalanceReceipt
+      // 3. Adjust BalanceReceipt with IST-aware propagation
       if (oldDate.toDateString() === newDate.toDateString()) {
-        // Same date → just apply diff
-        const receipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: existingCredit.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        if (receipt && difference !== 0) {
-          await tx.balanceReceipt.update({
-            where: { id: receipt.id },
-            data: {
-              amount:
-                difference > 0
-                  ? { decrement: difference } // more credit → reduce cash
-                  : { increment: Math.abs(difference) }, // less credit → add cash
-            },
-          });
+        // Same date → just apply diff (negative because more credit = less cash)
+        if (difference !== 0 && existingCredit.branchId) {
+          await updateBalanceReceiptIST(
+            existingCredit.branchId,
+            oldDate,
+            -difference,
+            tx
+          );
         }
       } else {
         // Date changed → restore old, apply new
-        const oldReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: existingCredit.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        const newReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: existingCredit.branchId,
-            date: {
-              gte: new Date(newDate.setHours(0, 0, 0, 0)),
-              lte: new Date(newDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        // Restore old receipt (give back old credit amount)
-        if (oldReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: oldReceipt.id },
-            data: { amount: { increment: oldAmount } },
-          });
-        }
-
-        // Apply new receipt (deduct new credit amount)
-        if (newReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: newReceipt.id },
-            data: { amount: { decrement: newAmount } },
-          });
+        if (existingCredit.branchId) {
+          // Restore old (add back old credit amount)
+          await updateBalanceReceiptIST(
+            existingCredit.branchId,
+            oldDate,
+            oldAmount,
+            tx
+          );
+          
+          // Apply new (subtract new credit amount)
+          await updateBalanceReceiptIST(
+            existingCredit.branchId,
+            newDate,
+            -newAmount,
+            tx
+          );
         }
       }
 
@@ -181,22 +151,14 @@ export async function DELETE(
         data: { outstandingPayments: { decrement: existingCredit.amount } },
       });
 
-      // 3. Increment back in BalanceReceipt (undo earlier decrement)
-      const existingReceipt = await tx.balanceReceipt.findFirst({
-        where: {
-          branchId: existingCredit.branchId,
-          date: {
-            gte: new Date(creditDate.setHours(0, 0, 0, 0)),
-            lte: new Date(creditDate.setHours(23, 59, 59, 999)),
-          },
-        },
-      });
-
-      if (existingReceipt) {
-        await tx.balanceReceipt.update({
-          where: { id: existingReceipt.id },
-          data: { amount: { increment: existingCredit.amount } },
-        });
+      // 3. Increment back in BalanceReceipt with ripple correction
+      if (existingCredit.branchId) {
+        await updateBalanceReceiptIST(
+          existingCredit.branchId,
+          creditDate,
+          existingCredit.amount, // Refund the cash
+          tx
+        );
       }
 
       return [removedCredit];

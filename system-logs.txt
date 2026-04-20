@@ -1,0 +1,2 @@
+[2026-04-20T10:56:44.519Z] [API] [Middleware] PATCH /api/expenses/69d7ac2f6b63f703a09a3132 
+[2026-04-20T11:02:33.463Z] [API] [Middleware] PATCH /api/expenses/69d65da70fcf7fa7c9562e39 

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { meterReadingUpdateSchema } from "@/schemas/meter-reading-schema";
 import { ObjectId } from "mongodb";
+import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { getISTDateRangeForQuery } from "@/lib/date-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,12 +142,6 @@ export async function PATCH(
       }
     }
 
-    // Update the meter reading
-    const updatedReading = await prisma.meterReading.update({
-      where: { id },
-      data: updateData,
-    });
-
     // Calculate changes for tank, stock, and nozzle updates
     const oldDiff = existingReading.closingReading - existingReading.openingReading;
     const newDiff = newDifference;
@@ -158,23 +154,25 @@ export async function PATCH(
 
     const fuelType = existingReading.nozzle?.fuelType;
 
-    // Update operations array
-    const updateOperations = [];
+    // Execute all updates in a single transaction for atomicity
+    const results = await prisma.$transaction(async (tx) => {
+      // 1. Update the meter reading itself
+      const updated = await tx.meterReading.update({
+        where: { id },
+        data: updateData,
+      });
 
-    // 1. Update nozzle opening reading to new closing reading
-    if (data.closingReading !== undefined) {
-      updateOperations.push(
-        prisma.nozzle.update({
+      // 2. Update nozzle opening reading
+      if (data.closingReading !== undefined) {
+        await tx.nozzle.update({
           where: { id: existingReading.nozzleId },
           data: { openingReading: newClosingReading },
-        })
-      );
-    }
+        });
+      }
 
-    // 2. Update tank current level if difference changed
-    if (connectedTank && qtyChange !== 0) {
-      updateOperations.push(
-        prisma.tank.update({
+      // 3. Update tank current level
+      if (connectedTank && qtyChange !== 0) {
+        await tx.tank.update({
           where: { id: connectedTank.id },
           data: {
             currentLevel:
@@ -182,41 +180,15 @@ export async function PATCH(
                 ? { decrement: qtyChange }
                 : { increment: Math.abs(qtyChange) },
           },
-        })
-      );
-    }
-
-    // 3. Update stock quantity if difference changed
-    if (fuelType && qtyChange !== 0 && existingReading.branchId) {
-      // If decreasing stock, validate availability first
-      if (qtyChange > 0) {
-        const stock = await prisma.stock.findFirst({
-          where: {
-            item: fuelType,
-            branchId: existingReading.branchId,
-          },
         });
-
-        if (!stock) {
-          return NextResponse.json(
-            { error: `Stock not found for ${fuelType} in this branch` },
-            { status: 400 }
-          );
-        }
-
-        if (stock.quantity - qtyChange < 0) {
-          return NextResponse.json(
-            { error: `No stock available for ${fuelType}. Available: ${stock.quantity.toFixed(2)}L, Required: ${qtyChange.toFixed(2)}L` },
-            { status: 400 }
-          );
-        }
       }
 
-      updateOperations.push(
-        prisma.stock.updateMany({
+      // 4. Update stock quantity
+      if (fuelType && qtyChange !== 0 && existingReading.branchId) {
+        await tx.stock.updateMany({
           where: { 
             item: fuelType,
-            branchId: existingReading.branchId, // CRITICAL: Only update stock for this branch
+            branchId: existingReading.branchId,
           },
           data: {
             quantity:
@@ -224,17 +196,47 @@ export async function PATCH(
                 ? { decrement: qtyChange }
                 : { increment: Math.abs(qtyChange) },
           },
-        })
-      );
-    }
+        });
+      }
 
-    // Execute all updates in parallel
-    if (updateOperations.length > 0) {
-      await Promise.all(updateOperations);
-      console.log(`Updated meter reading ${id} and related records`);
-    }
+      // 5. Update Sale and BalanceReceipt ripple
+      const amountDiff = newTotalAmount - existingReading.totalAmount;
+      if (amountDiff !== 0 && existingReading.branchId && existingReading.date) {
+        // Find existing sale for this date and branch
+        const dateString = existingReading.date.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const { start, end } = getISTDateRangeForQuery(dateString);
+        
+        const existingSale = await tx.sale.findFirst({
+          where: {
+            branchId: existingReading.branchId,
+            date: { gte: start, lte: end }
+          }
+        });
 
-    return NextResponse.json({ data: updatedReading }, { status: 200 });
+        if (existingSale) {
+          // Update the sale rate and cashPayment
+          await tx.sale.update({
+            where: { id: existingSale.id },
+            data: {
+              rate: { increment: amountDiff },
+              cashPayment: { increment: amountDiff }
+            }
+          });
+        }
+
+        // Ripple the balance correction forward
+        await updateBalanceReceiptIST(
+          existingReading.branchId,
+          existingReading.date,
+          amountDiff,
+          tx
+        );
+      }
+
+      return updated;
+    });
+
+    return NextResponse.json({ data: results }, { status: 200 });
   } catch (error) {
     console.error("Error updating meter reading:", error);
     
@@ -292,48 +294,71 @@ export async function DELETE(
       (mt) => mt.tank?.fuelType === fuelType
     )?.tank;
 
-    // Delete the meter reading
-    const meterReadingDelete = await prisma.meterReading.delete({
-      where: { id },
-    });
+    // Execute all operations in a transaction
+    const results = await prisma.$transaction(async (tx) => {
+      // 1. Delete the meter reading
+      const removed = await tx.meterReading.delete({
+        where: { id },
+      });
 
-    // Restore stock and tank level for the specific branch
-    const restoreOperations = [];
-
-    // 1. Restore tank current level
-    if (connectedTank && difference > 0) {
-      restoreOperations.push(
-        prisma.tank.update({
+      // 2. Restore tank current level
+      if (connectedTank && difference > 0) {
+        await tx.tank.update({
           where: { id: connectedTank.id },
           data: {
             currentLevel: { increment: difference },
           },
-        })
-      );
-    }
+        });
+      }
 
-    // 2. Restore stock quantity for the specific branch only
-    if (fuelType && branchId && difference > 0) {
-      restoreOperations.push(
-        prisma.stock.updateMany({
+      // 3. Restore stock quantity
+      if (fuelType && branchId && difference > 0) {
+        await tx.stock.updateMany({
           where: {
             item: fuelType,
-            branchId: branchId, // CRITICAL: Only restore stock for this branch
+            branchId: branchId,
           },
           data: {
             quantity: { increment: difference },
           },
-        })
-      );
-    }
+        });
+      }
 
-    // Execute restore operations
-    if (restoreOperations.length > 0) {
-      await Promise.all(restoreOperations);
-      console.log(`Restored stock ${fuelType} by ${difference} and tank level for branch ${branchId}`);
-    }
+      // 4. Adjust Sale and ripple BalanceReceipt back
+      if (existingReading.totalAmount > 0 && branchId && existingReading.date) {
+        const dateString = existingReading.date.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const { start, end } = getISTDateRangeForQuery(dateString);
 
-    return NextResponse.json({ data: meterReadingDelete }, { status: 200 });
+        const existingSale = await tx.sale.findFirst({
+          where: {
+            branchId: branchId,
+            date: { gte: start, lte: end }
+          }
+        });
+
+        if (existingSale) {
+          await tx.sale.update({
+            where: { id: existingSale.id },
+            data: {
+              rate: { decrement: existingReading.totalAmount },
+              cashPayment: { decrement: existingReading.totalAmount }
+            }
+          });
+        }
+
+        // Ripple the negative correction forward
+        await updateBalanceReceiptIST(
+          branchId,
+          existingReading.date,
+          -existingReading.totalAmount,
+          tx
+        );
+      }
+
+      return removed;
+    });
+
+    return NextResponse.json({ data: results }, { status: 200 });
   } catch (error) {
     console.error("Error deleting meter reading:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
