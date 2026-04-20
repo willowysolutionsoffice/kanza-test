@@ -2,11 +2,19 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Eye, Download } from "lucide-react";
+import { Eye, Download, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Sales } from "@/types/sales";
 import { ReportModal } from "./report-modal";
+import { ReportDeleteDialog } from "./report-delete-dialog";
 
 // Hook to get dynamic columns based on branch products
 export const useReportColumns = (userRole?: string, branchId?: string, userBranchId?: string): ColumnDef<Sales>[] => {
@@ -266,8 +274,7 @@ export const createReportColumns = (userRole?: string, userBranchId?: string): C
 
 const SalesActions = ({ sales, userRole, userBranchId }: { sales: Sales; userRole?: string; userBranchId?: string }) => {
   const [openReport, setOpenReport] = useState(false);
-
-
+  const [openDelete, setOpenDelete] = useState(false);
 
   const handleExportPDF = async () => {
     try {
@@ -522,25 +529,33 @@ const SalesActions = ({ sales, userRole, userBranchId }: { sales: Sales; userRol
   
   return (
     <>
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setOpenReport(true)}
-          className="h-8 w-8 p-0"
-          title="View Report"
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleExportPDF}
-          className="h-8 w-8 p-0"
-          title="Download PDF"
-        >
-          <Download className="h-4 w-4" />
-        </Button>
+      <div className="flex items-center justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setOpenReport(true)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Report
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportPDF}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+               onClick={() => setOpenDelete(true)}
+               className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Report
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <ReportModal
@@ -549,6 +564,17 @@ const SalesActions = ({ sales, userRole, userBranchId }: { sales: Sales; userRol
         date={sales.date}
         userRole={userRole}
         userBranchId={userBranchId || sales.branchId || undefined}
+      />
+
+      <ReportDeleteDialog
+        open={openDelete}
+        setOpen={setOpenDelete}
+        date={sales.date}
+        branchId={userBranchId || sales.branchId || ""}
+        onSuccess={() => {
+          // Dispatch custom event to refresh the table if needed
+          window.dispatchEvent(new Event('report-deleted'));
+        }}
       />
     </>
   );

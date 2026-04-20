@@ -102,6 +102,18 @@ function ReportTableWithDynamicColumns({
       fetchData(newPage, branchId);
     }
   }, [branchId, fetchData]);
+
+  // Listen for report deletion to refresh data
+  useEffect(() => {
+    const handleReportDeleted = () => {
+      fetchData(pagination.currentPage, branchId);
+    };
+
+    window.addEventListener('report-deleted', handleReportDeleted);
+    return () => {
+      window.removeEventListener('report-deleted', handleReportDeleted);
+    };
+  }, [fetchData, branchId, pagination.currentPage]);
   
   return (
     <ReportTable 

@@ -220,3 +220,58 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ date: string }> }
+) {
+  try {
+    const { date } = await params;
+    const { searchParams } = new URL(req.url);
+    const branchId = searchParams.get('branchId');
+
+    if (!branchId) {
+      return NextResponse.json({ error: "Branch ID is required" }, { status: 400 });
+    }
+
+    // Use IST timezone for consistent date handling
+    const { start: startOfDay, end: endOfDay } = getISTDateRangeForQuery(date);
+
+    // Common where clause for models that use 'date' and 'branchId'
+    const whereClause = {
+      date: { gte: startOfDay, lte: endOfDay },
+      branchId: branchId,
+    };
+
+    // We need to delete from all related models in a transaction
+    await prisma.$transaction([
+      prisma.sale.deleteMany({ where: whereClause }),
+      prisma.credit.deleteMany({ where: whereClause }),
+      prisma.customerPayment.deleteMany({
+        where: {
+          paidOn: { gte: startOfDay, lte: endOfDay },
+          branchId: branchId,
+        },
+      }),
+      prisma.purchase.deleteMany({ where: whereClause }),
+      prisma.expense.deleteMany({ where: whereClause }),
+      prisma.meterReading.deleteMany({
+        where: {
+          date: { gte: startOfDay, lte: endOfDay },
+          branchId: branchId,
+        },
+      }),
+      prisma.oil.deleteMany({ where: whereClause }),
+      prisma.bankDeposite.deleteMany({ where: whereClause }),
+      prisma.balanceReceipt.deleteMany({ where: whereClause }),
+    ]);
+
+    return NextResponse.json({ message: "Daily report and all related records deleted successfully" });
+  } catch (err) {
+    console.error("Report delete error:", err);
+    return NextResponse.json(
+      { error: "Failed to delete daily report" },
+      { status: 500 }
+    );
+  }
+}
