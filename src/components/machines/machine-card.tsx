@@ -17,10 +17,13 @@ import { Machine } from "@/types/machine";
 type Props = {
   data: Machine[];
   userRole?: string;
+  canEdit?: boolean;
 }
 
-export function Machinecard({ data, userRole }: Props) {
-  const isGm = (userRole?.toLowerCase() === "gm");
+export function Machinecard({ data, userRole, canEdit }: Props) {
+  const isAdmin = userRole?.toLowerCase() === "admin";
+  const isGm = userRole?.toLowerCase() === "gm";
+  const hasEditAccess = isAdmin || !!canEdit;
 
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false); 
@@ -58,7 +61,7 @@ export function Machinecard({ data, userRole }: Props) {
                   </div>
                 </div>
 
-                {!isGm && (
+                {hasEditAccess && (
                   <div className="flex justify-end space-x-2 pt-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

@@ -56,10 +56,12 @@ export const nozzleColumns: ColumnDef<Nozzle>[] = [
   },
 ];
 
-// Function to get columns based on user role
-export const getNozzleColumns = (userRole?: string): ColumnDef<Nozzle>[] => {
-  const isGm = (userRole?.toLowerCase() === "gm");
-  if (isGm) {
+// Function to get columns based on user role and canEdit permission
+export const getNozzleColumns = (userRole?: string, canEdit?: boolean): ColumnDef<Nozzle>[] => {
+  const isAdmin = userRole?.toLowerCase() === "admin";
+  const hasEditAccess = isAdmin || !!canEdit;
+  
+  if (!hasEditAccess) {
     return nozzleColumns.filter(col => col.id !== "actions");
   }
   return nozzleColumns;

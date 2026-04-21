@@ -21,10 +21,13 @@ import { Progress } from '../ui/progress'
 interface TankCardProps {
   tanks: Tank[]
   userRole?: string
+  canEdit?: boolean
 }
 
-export function TankCard({ tanks, userRole }: TankCardProps) {
-  const isGm = (userRole?.toLowerCase() === "gm");
+export function TankCard({ tanks, userRole, canEdit }: TankCardProps) {
+  const isAdmin = userRole?.toLowerCase() === "admin";
+  const isGm = userRole?.toLowerCase() === "gm";
+  const hasEditAccess = isAdmin || !!canEdit;
   const [openEdit, setOpenEdit] = useState(false)
   const [openDelete, setOpenDelete] = useState(false)
   const [openRefill, setOpenRefill] = useState(false)
@@ -92,7 +95,7 @@ export function TankCard({ tanks, userRole }: TankCardProps) {
                 </div>
 
                 <div className="flex space-x-2 pt-2">
-                  {!isGm && (
+                  {hasEditAccess && (
                     <Button 
                       variant="outline" 
                       size="sm" 

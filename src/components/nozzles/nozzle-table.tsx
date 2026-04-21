@@ -35,12 +35,12 @@ import { NozzleTableProps } from "@/types/nozzle";
 import { Search } from "lucide-react";
 import { getNozzleColumns } from "./nozzle-column";
 
-export function NozzleTable<TValue>({ columns, data, userRole }: Omit<NozzleTableProps<TValue>, 'columns'> & { columns?: NozzleTableProps<TValue>['columns']; userRole?: string }) {
-  // If columns are provided, use them; otherwise generate based on userRole
+export function NozzleTable<TValue>({ columns, data, userRole, canEdit }: Omit<NozzleTableProps<TValue>, 'columns'> & { columns?: NozzleTableProps<TValue>['columns']; userRole?: string; canEdit?: boolean }) {
+  // If columns are provided, use them; otherwise generate based on userRole and canEdit
   const tableColumns = useMemo(() => {
     if (columns) return columns;
-    return getNozzleColumns(userRole);
-  }, [columns, userRole]);
+    return getNozzleColumns(userRole, canEdit);
+  }, [columns, userRole, canEdit]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({

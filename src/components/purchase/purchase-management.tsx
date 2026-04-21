@@ -6,10 +6,10 @@ import { PurchaseTable } from "@/components/purchase/purchase-table";
 import { PurchaseFormModal } from "@/components/purchase/purchase-form";
 // import { PurchaseOrderFormModal } from "@/components/purchase/purchase-form";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { purchaseColumns } from "@/components/purchase/purchase-column";
+import { purchaseColumns, getPurchaseColumns } from "@/components/purchase/purchase-column";
 import { Purchase } from "@/types/purchase";
 import { PurchaseOrderTable } from "../purchase-order/purchase-order-table";
-import { purchaseOrderColumns } from "../purchase-order/purchase-order-column";
+import { purchaseOrderColumns, getPurchaseOrderColumns } from "../purchase-order/purchase-order-column";
 import { PurchaseOrder } from "@/types/purchase-order";
 import { PurchaseOrderFormModal } from "../purchase-order/purchase-order-form";
 
@@ -17,16 +17,17 @@ type PurchaseManagementProps = {
   purchase: Purchase[];
   purchaseOrder: PurchaseOrder[];
   userRole?: string;
+  canEdit?: boolean;
   userBranchId?: string;
   branchId?: string;
   isGm?: boolean;
 };
 
-export default function PurchaseManagement({ purchase, purchaseOrder, userRole, userBranchId, branchId , isGm }: PurchaseManagementProps) {
+export default function PurchaseManagement({ purchase, purchaseOrder, userRole, canEdit, userBranchId, branchId , isGm }: PurchaseManagementProps) {
   const [activeTab, setActiveTab] = useState("purchase");
 
-  const tablePurchaseColumns = isGm ? purchaseColumns.filter(col => col.id !== 'actions') : purchaseColumns;
-  const tablePurchaseOrderColumns = isGm ? purchaseOrderColumns.filter(col => col.id !== 'actions') : purchaseOrderColumns;
+  const tablePurchaseColumns = getPurchaseColumns(userRole, canEdit);
+  const tablePurchaseOrderColumns = getPurchaseOrderColumns(userRole, canEdit);
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-2">
@@ -39,6 +40,7 @@ export default function PurchaseManagement({ purchase, purchaseOrder, userRole, 
           {activeTab === "purchase" ? (
             <PurchaseFormModal 
               userRole={userRole}
+              canEdit={canEdit}
               userBranchId={userBranchId}
             />
           ) : (
@@ -57,11 +59,11 @@ export default function PurchaseManagement({ purchase, purchaseOrder, userRole, 
           </TabsList>
 
           <TabsContent value="purchase">
-            <PurchaseTable data={purchase} columns={tablePurchaseColumns} branchId={branchId} />
+            <PurchaseTable data={purchase} columns={tablePurchaseColumns} branchId={branchId} canEdit={canEdit} userRole={userRole} />
           </TabsContent>
 
           <TabsContent value="ordered">
-            <PurchaseOrderTable data={purchaseOrder} columns={tablePurchaseOrderColumns} />
+            <PurchaseOrderTable data={purchaseOrder} columns={tablePurchaseOrderColumns} userRole={userRole} canEdit={canEdit} />
           </TabsContent>
         </Tabs>
       </div>

@@ -21,7 +21,8 @@ export default async function MachinePage() {
     redirect('/login');
   }
   
-  const userRole = session.user?.role ?? undefined;
+   const userRole = session.user?.role ?? undefined;
+  const canEdit = session.user?.canEdit ?? false;
   const isGm = (userRole?.toLowerCase() === "gm");
   
   // Fetch machines and branches
@@ -55,7 +56,7 @@ export default async function MachinePage() {
               <h1 className="text-2xl font-bold tracking-tight">Machine Management</h1>
               <p className="text-muted-foreground">Monitor and manage fuel dispensing machines by branch</p>
             </div>
-            {!isGm && <MachineFormModal />}
+            {(!isGm || canEdit) && <MachineFormModal />}
           </div>
 
           <Tabs defaultValue={branches[0]?.id} className="w-full">
@@ -76,7 +77,7 @@ export default async function MachinePage() {
                     {machines.length} machine{machines.length !== 1 ? 's' : ''} in this branch
                   </p>
                 </div>
-                <Machinecard data={machines} userRole={userRole} />
+                <Machinecard data={machines} userRole={userRole} canEdit={canEdit} />
               </TabsContent>
             ))}
           </Tabs>

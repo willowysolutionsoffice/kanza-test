@@ -22,6 +22,7 @@ export default async function TankPage() {
   }
   
   const userRole = session.user?.role ?? undefined;
+  const canEdit = session.user?.canEdit ?? false;
   const isGm = (userRole?.toLowerCase() === "gm");
   
   // Fetch tanks and branches
@@ -55,7 +56,7 @@ export default async function TankPage() {
               <h1 className="text-2xl font-bold tracking-tight">Tank Management</h1>
               <p className="text-muted-foreground">Monitor and manage fuel tank levels by branch</p>
             </div>
-            {!isGm && <TankFormDialog />}
+            {(!isGm || canEdit) && <TankFormDialog />}
           </div>
 
           <Tabs defaultValue={branches[0]?.id} className="w-full">
@@ -76,7 +77,7 @@ export default async function TankPage() {
                     {tanks.length} tank{tanks.length !== 1 ? 's' : ''} in this branch
                   </p>
                 </div>
-                <TankCard tanks={tanks} userRole={userRole} />
+                <TankCard tanks={tanks} userRole={userRole} canEdit={canEdit} />
               </TabsContent>
             ))}
           </Tabs>

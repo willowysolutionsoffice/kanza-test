@@ -25,6 +25,7 @@ export default async function NozzlePage() {
   }
   
   const userRole = session.user?.role ?? undefined;
+  const canEdit = session.user?.canEdit ?? false;
   const isGm = (userRole?.toLowerCase() === "gm");
   
   // Fetch nozzles and branches
@@ -58,7 +59,7 @@ export default async function NozzlePage() {
               <h1 className="text-2xl font-bold tracking-tight">Nozzle Management</h1>
               <p className="text-muted-foreground">Monitor and manage fuel dispensing nozzles by branch</p>
             </div>
-            {!isGm && <NozzleFormModal />}
+            {(!isGm || canEdit) && <NozzleFormModal />}
           </div>
 
           <Tabs defaultValue={branches[0]?.id} className="w-full">
@@ -129,7 +130,7 @@ export default async function NozzlePage() {
                     </Card>
                   </div>
 
-                  <NozzleTable data={nozzles} userRole={userRole} />
+                  <NozzleTable data={nozzles} userRole={userRole} canEdit={canEdit} />
                 </TabsContent>
               );
             })}

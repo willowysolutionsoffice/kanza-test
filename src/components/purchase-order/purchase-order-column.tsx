@@ -72,6 +72,17 @@ export const purchaseOrderColumns: ColumnDef<PurchaseOrder>[] = [
   },
 ];
 
+// Function to get columns based on user role and canEdit permission
+export const getPurchaseOrderColumns = (userRole?: string, canEdit?: boolean): ColumnDef<PurchaseOrder>[] => {
+  const isAdmin = userRole?.toLowerCase() === "admin";
+  const hasEditAccess = isAdmin || !!canEdit;
+  
+  if (!hasEditAccess) {
+    return purchaseOrderColumns.filter(col => col.id !== "actions");
+  }
+  return purchaseOrderColumns;
+};
+
 const PurchaseOrderActions = ({ purchaseOrder }: { purchaseOrder: PurchaseOrder }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false); 

@@ -109,6 +109,7 @@ export default async function PurchasePage() {
                   purchase={purchases}
                   purchaseOrder={purchaseOrders}
                   userRole={session.user.role || undefined}
+                  canEdit={session.user.canEdit || false}
                   userBranchId={userBranchId}
                   branchId={branchId}
                 />
