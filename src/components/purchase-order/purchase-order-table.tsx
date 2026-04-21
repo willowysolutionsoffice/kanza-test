@@ -30,7 +30,7 @@ import { useState } from "react";
 import { PurchaseOrderTableProps } from "@/types/purchase-order";
 
 
-export function PurchaseOrderTable<TValue>({ columns, data }: PurchaseOrderTableProps<TValue>) {
+export function PurchaseOrderTable<TValue>({ columns, data, canEdit, userRole }: PurchaseOrderTableProps<TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
 

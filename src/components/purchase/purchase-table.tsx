@@ -35,6 +35,8 @@ export function PurchaseTable<TValue>({
   columns,
   data: initialData,
   branchId,
+  canEdit,
+  userRole,
 }: PurchaseTableProps<TValue> & { branchId?: string }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");

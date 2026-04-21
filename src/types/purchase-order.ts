@@ -9,4 +9,6 @@ export interface PurchaseOrder extends PrismaPurchaseOrder {
 export interface PurchaseOrderTableProps<TValue> {
   columns: ColumnDef<PurchaseOrder, TValue>[];
   data: PurchaseOrder[];
+  canEdit?: boolean;
+  userRole?: string;
 }

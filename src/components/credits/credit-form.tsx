@@ -49,6 +49,7 @@ export function CreditFormDialog({
   openChange,
   branchId,
   userRole,
+  canEdit,
   userBranchId,
 }: {
   credits?: Credit;
@@ -56,6 +57,7 @@ export function CreditFormDialog({
   openChange?: (open: boolean) => void;
   branchId?: string;
   userRole?: string;
+  canEdit?: boolean;
   userBranchId?: string;
 }) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL;

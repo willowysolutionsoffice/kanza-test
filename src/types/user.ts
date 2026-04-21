@@ -42,7 +42,7 @@ export type UserFormData = {
   confirmPassword: string;
   role: string;
   branch: string;
-  canEdit?: boolean;
+  canEdit?: boolean | null;
 };
 
 export type UserFormProps = {

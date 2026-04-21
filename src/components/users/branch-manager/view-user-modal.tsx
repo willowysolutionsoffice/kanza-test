@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { User } from '@prisma/client';
+import { User } from '@/types/user';
 import { Label } from '@/components/ui/label';
 
 interface ViewUserModalProps {

@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { nozzleSchemaWithId } from "@/schemas/nozzle-schema";
 import { ObjectId } from "mongodb";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +45,16 @@ export async function PATCH(
       data,
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'UPDATE',
+        module: 'Nozzles',
+        details: { id, changes: data }
+    });
+
     return NextResponse.json({ data: nozzles }, { status: 200 });
   } catch (error) {
     console.error("Error updating nozzles:", error);
@@ -70,6 +83,16 @@ export async function DELETE(
   try {
     const nozzlesDelete = await prisma.nozzle.delete({
       where: { id },
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'DELETE',
+        module: 'Nozzles',
+        details: { id, deletedData: nozzlesDelete }
     });
 
     return NextResponse.json({ data: nozzlesDelete }, { status: 200 });

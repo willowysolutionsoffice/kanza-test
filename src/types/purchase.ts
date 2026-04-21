@@ -10,4 +10,6 @@ export interface Purchase extends PrismaPurchase {
 export interface PurchaseTableProps<TValue> {
   columns: ColumnDef<Purchase, TValue>[];
   data: Purchase[];
+  canEdit?: boolean;
+  userRole?: string;
 }

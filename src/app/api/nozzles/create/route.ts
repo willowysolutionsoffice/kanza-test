@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         userName: session?.user?.name,
         action: 'CREATE',
         module: 'Nozzles',
-        details: { id: nozzle.id, name: nozzle.nozzleName, machineId: nozzle.machineId }
+        details: { id: nozzle.id, name: nozzle.nozzleNumber, machineId: nozzle.machineId }
     });
 
     return NextResponse.json({ data: nozzle }, { status: 201 });

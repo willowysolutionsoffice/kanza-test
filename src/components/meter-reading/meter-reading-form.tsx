@@ -58,6 +58,7 @@ export function MeterReadingFormSheet({
   openChange,
   branchId,
   userRole,
+  canEdit,
   userBranchId,
 }: {
   meterReading? : MeterReading;
@@ -65,6 +66,7 @@ export function MeterReadingFormSheet({
   openChange?: (open: boolean) => void;
   branchId?: string;
   userRole?: string;
+  canEdit?: boolean;
   userBranchId?: string;
 }) {
   const router = useRouter();

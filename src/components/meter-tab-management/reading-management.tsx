@@ -50,7 +50,7 @@ function ReportTableWithDynamicColumns({
     limit: 15
   });
 
-  const columns = useReportColumns(userRole, branchId, canEdit);
+  const columns = useReportColumns(userRole, branchId, undefined, canEdit);
 
   // Fetch data from API with pagination
   const fetchData = useCallback(async (page: number, branchIdParam?: string) => {

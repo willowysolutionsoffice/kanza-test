@@ -52,6 +52,7 @@ export function OilFormModal({
   userRole,
   userBranchId,
   wizardDate,
+  canEdit,
 }: {
   oil?: Oil;
   open?: boolean;
@@ -60,6 +61,7 @@ export function OilFormModal({
   userRole?: string;
   userBranchId?: string;
   wizardDate?: Date;
+  canEdit?: boolean;
 }) {
     const [productOption, setProductOptions] = useState<{ 
       productName: string;

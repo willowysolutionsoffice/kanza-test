@@ -50,12 +50,14 @@ export function PurchaseFormModal({
   // open,
   // openChange,
   userRole,
+  canEdit,
   userBranchId,
 }: {
   purchase?: Purchase;
   open?: boolean;
   openChange?: (open: boolean) => void;
   userRole?: string;
+  canEdit?: boolean;
   userBranchId?: string;
 }) {
   const [supplierOptions, setSupplierOptions] = useState<

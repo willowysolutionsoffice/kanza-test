@@ -42,8 +42,14 @@ export const BankDepositeFormDialog = ({
   openChange,
   branchId,
   userRole,
+  canEdit,
   userBranchId,
-}: BankDepositeFormProps & { branchId?: string; userRole?: string; userBranchId?: string }) => {
+}: BankDepositeFormProps & { 
+  branchId?: string; 
+  userRole?: string; 
+  canEdit?: boolean;
+  userBranchId?: string 
+}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bankOptions, setBankOptions] = useState<{ bankName: string; id: string;}[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(bankDeposite?.branchId || branchId || userBranchId || "");

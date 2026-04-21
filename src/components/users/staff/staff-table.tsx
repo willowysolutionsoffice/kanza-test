@@ -41,7 +41,7 @@ import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { UsersTableProps } from '@/types/user';
 import { authClient } from '@/lib/auth-client';
-import { User } from '@prisma/client';
+import { User } from '@/types/user';
 import { StaffForm } from './staff-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 

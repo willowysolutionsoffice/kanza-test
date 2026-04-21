@@ -34,7 +34,7 @@ import { Customer } from "@/types/customer";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface CustomerTableProps<TValue> {
-  columns: ((userRole?: string, userBranchId?: string) => ColumnDef<Customer, TValue>[]) | ColumnDef<Customer, TValue>[];
+  columns: ((userRole?: string, userBranchId?: string, canEdit?: boolean) => ColumnDef<Customer, TValue>[]) | ColumnDef<Customer, TValue>[];
   data: Customer[];
   userRole?: string;
   userBranchId?: string;
