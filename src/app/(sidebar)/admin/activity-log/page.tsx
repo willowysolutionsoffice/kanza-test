@@ -13,7 +13,7 @@ function formatLogDetails(log: any) {
   if (!log.details) return "-";
   
   try {
-    const details = JSON.parse(log.details);
+    const details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
     const action = log.action;
     const module = log.module || "";
 
@@ -22,8 +22,8 @@ function formatLogDetails(log: any) {
 
     if (module === "Sales") {
       if (action === "CREATE") return `New Sale: ₹${details.cashPayment || 0} (${details.date ? new Date(details.date).toLocaleDateString() : ""})`;
-      if (action === "UPDATE") return `Updated Sale #${details.id?.slice(-4) || ""}`;
-      if (action === "DELETE") return `Deleted Sale from ${details.deletedData?.date ? new Date(details.deletedData.date).toLocaleDateString() : "unknown date"}`;
+      if (action === "UPDATE") return `Updated Sale Details`;
+      if (action === "DELETE") return `Deleted Sale Entry (₹${details.deletedData?.cashPayment || 0})`;
     }
 
     if (module === "Expenses") {
@@ -32,19 +32,68 @@ function formatLogDetails(log: any) {
       if (action === "DELETE") return `Deleted Expense: ${details.deletedData?.description || ""} (₹${details.deletedData?.amount || 0})`;
     }
 
+    if (module === "Refills") {
+      if (action === "CREATE") return `Tank Refill: Added ${details.refillAmount || 0} Liters`;
+    }
+
+    if (module === "Customers") {
+      if (action === "UPDATE") return `Updated Customer Profile: ${details.changes?.name || "details modified"}`;
+      if (action === "DELETE") return `Deleted Customer: ${details.deletedData?.name || "ID: " + details.id}`;
+    }
+
+    if (module === "Suppliers") {
+      if (action === "UPDATE") return `Updated Supplier Details: ${details.changes?.name || "details modified"}`;
+      if (action === "DELETE") return `Deleted Supplier: ${details.deletedData?.name || "ID: " + details.id}`;
+    }
+
+    if (module === "BankDeposits") {
+      if (action === "CREATE") return `Bank Deposit: Added ₹${details.amount || 0} to bank`;
+      if (action === "UPDATE") return `Updated Bank Deposit Record (₹${details.changes?.amount || "details modified"})`;
+      if (action === "DELETE") return `Deleted Bank Deposit: ₹${details.deletedData?.amount || 0}`;
+    }
+
+    if (module === "Credits") {
+      if (action === "CREATE") return `New Credit Entry: ₹${details.amount || 0}`;
+      if (action === "UPDATE") return `Updated Credit Record (₹${details.changes?.amount || "details modified"})`;
+      if (action === "DELETE") return `Deleted Credit Record: ₹${details.deletedData?.amount || 0}`;
+    }
+
+    if (module === "MeterReadings") {
+      if (action === "CREATE") return `Recorded ${details.count || 0} Nozzle Readings`;
+      if (action === "UPDATE") return `Updated Nozzle Reading Details`;
+      if (action === "DELETE") return `Deleted Meter Reading Record`;
+    }
+
+    if (module === "Payments") {
+      if (action === "CREATE") return `Customer Payment Received: ₹${details.amount || 0}`;
+    }
+
+    if (module === "PurchasePayments") {
+      if (action === "CREATE") return `Supplier Payment Paid: ₹${details.amount || 0}`;
+    }
+
+    if (module === "Purchases") {
+      if (action === "CREATE") return `Stock Purchase: Added ₹${details.amount || 0} of fuel/stock`;
+    }
+
     if (module === "Users") {
       if (action === "UPDATE") {
         const changes = details.changes || {};
         const parts = [];
         if (changes.canEdit !== undefined) parts.push(`Edit Access: ${changes.canEdit ? "Enabled" : "Disabled"}`);
         if (changes.role) parts.push(`Role changed to ${changes.role}`);
-        return parts.length > 0 ? `Updated User: ${parts.join(", ")}` : "User updated";
+        return parts.length > 0 ? `Updated User: ${parts.join(", ")}` : "User permissions updated";
       }
     }
 
-    if (module === "MeterReadings") {
-      if (action === "CREATE") return `Recorded ${details.count || 0} nozzle readings for ${details.shift || ""} shift`;
+    if (module === "Tanks" || module === "Machines" || module === "Nozzles") {
+      if (action === "CREATE") return `Setup: Added New ${module.slice(0, -1)}`;
+      if (action === "UPDATE") return `Updated ${module.slice(0, -1)} Settings`;
+      if (action === "DELETE") return `Removed ${module.slice(0, -1)} from System`;
     }
+
+    // fallback for raw JSON objects
+    if (typeof details === 'object') return `${action} action in ${module}`;
 
     // Default formatting for others
     return log.details;
