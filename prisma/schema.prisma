@@ -517,6 +517,7 @@ model User {
   updatedAt     DateTime
   branch        String   
   role          String
+  canEdit       Boolean?  @default(false)
   banned        Boolean?
   banReason     String?
   banExpires    DateTime?

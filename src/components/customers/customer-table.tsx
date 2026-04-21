@@ -38,6 +38,7 @@ interface CustomerTableProps<TValue> {
   data: Customer[];
   userRole?: string;
   userBranchId?: string;
+  canEdit?: boolean;
 }
 
 export function CustomerTable<TValue>({
@@ -46,6 +47,7 @@ export function CustomerTable<TValue>({
   branchId,
   userRole,
   userBranchId,
+  canEdit,
 }: CustomerTableProps<TValue> & { branchId?: string }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -115,7 +117,7 @@ export function CustomerTable<TValue>({
 
   const table = useReactTable({
     data,
-    columns: typeof columns === 'function' ? columns(userRole, userBranchId) : columns,
+    columns: typeof columns === 'function' ? columns(userRole, userBranchId, canEdit) : columns,
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),

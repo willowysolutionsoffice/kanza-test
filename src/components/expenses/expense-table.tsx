@@ -27,13 +27,18 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback } from "react";
-import { ExpenseTableProps } from "@/types/expense";
+import { Expense, ExpenseTableProps } from "@/types/expense";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { expenseColumns } from "./expense-colums";
 
-export function ExpenseTable<TValue>({ data: initialData, branchId, userRole }: ExpenseTableProps<TValue> & { branchId?: string; userRole?: string }) {
-  const columns = expenseColumns(userRole);
+export function ExpenseTable<TValue>({
+  data: initialData,
+  userRole,
+  canEdit,
+  branchId,
+}: ExpenseTableProps<TValue> & { branchId?: string; userRole?: string; canEdit?: boolean }) {
+  const columns = expenseColumns(userRole, canEdit);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [data, setData] = useState(initialData);

@@ -82,6 +82,7 @@ export default async function MeterReadingPage({
         sales={sales}
         branches={visibleBranches}
         userRole={session.user.role || undefined}
+        canEdit={session.user.canEdit || false}
         isGm={isGm}
         initialBranchId={activeBranchId}
         salesPagination={pagination}

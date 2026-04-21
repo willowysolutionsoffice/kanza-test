@@ -8,6 +8,7 @@ const updateUserSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
   role: z.string().optional(),
   branch: z.string().optional(),
+  canEdit: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -35,12 +36,14 @@ export async function PATCH(
       email?: string;
       role?: string;
       branch?: string;
+      canEdit?: boolean;
     } = {};
     
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (role !== undefined) updateData.role = role;
     if (branch !== undefined) updateData.branch = branch;
+    if (body.canEdit !== undefined) updateData.canEdit = body.canEdit;
 
     // Update via prisma for additional fields
     if (Object.keys(updateData).length > 0) {

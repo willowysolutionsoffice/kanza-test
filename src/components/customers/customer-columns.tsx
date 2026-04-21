@@ -9,7 +9,7 @@ import { CustomerDeleteDialog } from "./customer-delete-dailog";
 import { CustomerHistoryModal } from "./customer-history-modal";
 import { Customer } from "@/types/customer";
 
-export const customerColumns = (userRole?: string, userBranchId?: string): ColumnDef<Customer>[] => [
+export const customerColumns = (userRole?: string, userBranchId?: string, canEdit?: boolean): ColumnDef<Customer>[] => [
   {
     accessorKey: "name",
     header: "Name",
@@ -84,15 +84,15 @@ export const customerColumns = (userRole?: string, userBranchId?: string): Colum
     header: "Address",
     cell: ({ row }) => <div className="px-3">{row.getValue("address") || "..."}</div>,
   },
-  // Only add Actions column for admin users
-  ...(userRole?.toLowerCase() === "admin" ? [{
+  // Only add Actions column for admin users or users with edit access
+  ...(userRole?.toLowerCase() === "admin" || !!canEdit ? [{
     id: "actions",
     header: "Actions",
-    cell: ({ row }) => <CustomerActions customer={row.original} userRole={userRole} userBranchId={userBranchId} />,
+    cell: ({ row }) => <CustomerActions customer={row.original} userRole={userRole} userBranchId={userBranchId} canEdit={canEdit} />,
   } as ColumnDef<Customer>] : []),
 ];
 
-const CustomerActions = ({ customer, userRole, userBranchId }: { customer: Customer; userRole?: string; userBranchId?: string }) => {
+const CustomerActions = ({ customer, userRole, userBranchId, canEdit }: { customer: Customer; userRole?: string; userBranchId?: string; canEdit?: boolean }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const [openHistory, setOpenHistory] = useState(false);

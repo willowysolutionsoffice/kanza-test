@@ -81,7 +81,12 @@ const expensesByBranch = visibleBranches.map((branch: { id: string; name: string
                     {expenses.length} expense{expenses.length !== 1 ? 's' : ''} in this branch
                   </p>
                 </div>
-                <ExpenseTable userRole={session.user.role || undefined} data={expenses} branchId={branchId} />
+                <ExpenseTable 
+                  userRole={session.user.role || undefined} 
+                  canEdit={session.user.canEdit || false}
+                  data={expenses} 
+                  branchId={branchId} 
+                />
               </TabsContent>
             ))}
           </Tabs>

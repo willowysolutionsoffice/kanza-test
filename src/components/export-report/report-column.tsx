@@ -17,7 +17,7 @@ import { ReportModal } from "./report-modal";
 import { ReportDeleteDialog } from "./report-delete-dialog";
 
 // Hook to get dynamic columns based on branch products
-export const useReportColumns = (userRole?: string, branchId?: string, userBranchId?: string): ColumnDef<Sales>[] => {
+export const useReportColumns = (userRole?: string, branchId?: string, userBranchId?: string, canEdit?: boolean): ColumnDef<Sales>[] => {
   const [branchProducts, setBranchProducts] = useState<Array<{ productName: string }>>([]);
   
   // Fetch branch products to determine which columns to show
@@ -174,7 +174,7 @@ export const useReportColumns = (userRole?: string, branchId?: string, userBranc
     },
     {
       id: "actions",
-      cell: ({ row }) => <SalesActions sales={row.original} userRole={userRole} userBranchId={userBranchId || branchId} />,
+      cell: ({ row }) => <SalesActions sales={row.original} userRole={userRole} userBranchId={userBranchId || branchId} canEdit={canEdit} />,
     },
   ], [hasXgDiesel, hasPowerPetrol, userRole, userBranchId, branchId]);
 
@@ -272,7 +272,7 @@ export const createReportColumns = (userRole?: string, userBranchId?: string): C
   },
 ];
 
-const SalesActions = ({ sales, userRole, userBranchId }: { sales: Sales; userRole?: string; userBranchId?: string }) => {
+const SalesActions = ({ sales, userRole, userBranchId, canEdit }: { sales: Sales; userRole?: string; userBranchId?: string; canEdit?: boolean }) => {
   const [openReport, setOpenReport] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 
@@ -547,13 +547,15 @@ const SalesActions = ({ sales, userRole, userBranchId }: { sales: Sales; userRol
               <Download className="mr-2 h-4 w-4" />
               Download PDF
             </DropdownMenuItem>
-            <DropdownMenuItem 
-               onClick={() => setOpenDelete(true)}
-               className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Report
-            </DropdownMenuItem>
+            {(userRole?.toLowerCase() === 'admin' || canEdit) && (
+              <DropdownMenuItem 
+                 onClick={() => setOpenDelete(true)}
+                 className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Report
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

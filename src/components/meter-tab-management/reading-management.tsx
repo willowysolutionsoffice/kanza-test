@@ -20,12 +20,14 @@ import { Plus } from "lucide-react";
 function ReportTableWithDynamicColumns({
   data: initialData,
   userRole,
+  canEdit,
   branchId,
   pagination: initialPagination,
   currentPage: initialPage,
 }: {
   data: Sales[];
   userRole?: string;
+  canEdit?: boolean;
   branchId: string;
   pagination?: {
     currentPage: number;
@@ -48,7 +50,7 @@ function ReportTableWithDynamicColumns({
     limit: 15
   });
 
-  const columns = useReportColumns(userRole, branchId);
+  const columns = useReportColumns(userRole, branchId, canEdit);
 
   // Fetch data from API with pagination
   const fetchData = useCallback(async (page: number, branchIdParam?: string) => {
@@ -133,6 +135,7 @@ type MeterTabManagementProps = {
   sales: Sales[];
   branches: { id: string; name: string }[];
   userRole?: string;
+  canEdit?: boolean;
   isGm?: boolean;
   initialBranchId?: string;
   salesPagination?: {
@@ -152,6 +155,7 @@ export default function MeterTabManagement({
   sales,
   branches,
   userRole,
+  canEdit,
   isGm,
   initialBranchId,
   salesPagination,
@@ -202,7 +206,7 @@ export default function MeterTabManagement({
       sales: sales.filter((sale: Sales) => sale.branchId === branch.id)
     }));
 
-    const oilColumnsForTable = isGm 
+    const oilColumnsForTable = (isGm || (!canEdit && userRole?.toLowerCase() !== 'admin'))
         ? oilColumns.filter(column => column.id !== "actions")
         : oilColumns;
 
@@ -222,7 +226,7 @@ export default function MeterTabManagement({
               <Plus className="w-4 h-4 mr-2" />
               All Records
             </Button>
-            {activeTab === "meter-reading" ? <MeterReadingFormSheet key={activeBranch} branchId={activeBranch} userRole={userRole} userBranchId={branches.find(b => b.id === activeBranch)?.id} /> : activeTab === "other-Products" ? <OilFormModal key={activeBranch} branchId={activeBranch} userRole={userRole} userBranchId={branches.find(b => b.id === activeBranch)?.id} /> : ""}
+            {activeTab === "meter-reading" ? <MeterReadingFormSheet key={activeBranch} branchId={activeBranch} userRole={userRole} canEdit={canEdit} userBranchId={branches.find(b => b.id === activeBranch)?.id} /> : activeTab === "other-Products" ? <OilFormModal key={activeBranch} branchId={activeBranch} userRole={userRole} canEdit={canEdit} userBranchId={branches.find(b => b.id === activeBranch)?.id} /> : ""}
           </div>
             )
           }
@@ -260,7 +264,7 @@ export default function MeterTabManagement({
                 </TabsList>
 
                 <TabsContent value="meter-reading">
-                  <MeterReadingTable data={branchMeterReading} userRole={userRole} branchId={branchId}/>
+                  <MeterReadingTable data={branchMeterReading} userRole={userRole} canEdit={canEdit} branchId={branchId}/>
                 </TabsContent>
 
                 <TabsContent value="other-Products">
@@ -271,6 +275,7 @@ export default function MeterTabManagement({
                   <ReportTableWithDynamicColumns 
                     data={branchSales} 
                     userRole={userRole}
+                    canEdit={canEdit}
                     branchId={branchId}
                     pagination={salesPagination}
                     currentPage={currentPage}

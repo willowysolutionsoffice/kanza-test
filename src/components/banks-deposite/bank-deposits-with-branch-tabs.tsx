@@ -10,6 +10,7 @@ type BankDepositsWithBranchTabsProps = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   depositsByBranch: { branchId: string; branchName: string; deposits: any[] }[];
   userRole?: string;
+  canEdit?: boolean;
   isGm?: boolean;
   userBranchId?: string;
 };
@@ -18,6 +19,7 @@ export function BankDepositsWithBranchTabs({
   branches,
   depositsByBranch,
   userRole,
+  canEdit,
   userBranchId,
   isGm,
 }: BankDepositsWithBranchTabsProps) {
@@ -39,6 +41,7 @@ export function BankDepositsWithBranchTabs({
             <BankDepositeFormDialog
               branchId={activeBranch}
               userRole={userRole}
+              canEdit={canEdit}
               userBranchId={userBranchId}
             />
           )}
@@ -72,7 +75,7 @@ export function BankDepositsWithBranchTabs({
                   this branch
                 </p>
               </div>
-              <BankDepositeTable data={deposits} userRole={userRole} />
+              <BankDepositeTable data={deposits} userRole={userRole} canEdit={canEdit} />
             </TabsContent>
           ))}
         </Tabs>

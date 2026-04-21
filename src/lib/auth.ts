@@ -25,6 +25,12 @@ export const auth = betterAuth({
         required: false,
         input: true,
       },
+      canEdit: {
+        type: 'boolean',
+        required: false,
+        defaultValue: false,
+        input: true,
+      },
     },
   },
   plugins: [

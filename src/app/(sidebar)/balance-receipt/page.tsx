@@ -101,6 +101,7 @@ const balanceReceiptsByBranch = visibleBranches.map((branch: { id: string; name:
                   data={balanceReceipts} 
                   branchId={branchId}
                   userRole={userRole}
+                  canEdit={session.user.canEdit || false}
                 />
               </TabsContent>
             ))}

@@ -60,6 +60,27 @@ export function UsersTable({ users, roles, branches , isGm }: UsersTableProps) {
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [passwordUpdateUser, setPasswordUpdateUser] = useState<User | null>(null);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [updatingEditAccessId, setUpdatingEditAccessId] = useState<string | null>(null);
+
+  const toggleEditAccess = async (userId: string, currentStatus: boolean | null | undefined) => {
+    setUpdatingEditAccessId(userId);
+    try {
+      const res = await fetch(`/api/auth/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ canEdit: !currentStatus }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update permission");
+
+      toast.success(`Edit access ${!currentStatus ? 'enabled' : 'disabled'} successfully`);
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to update edit access");
+    } finally {
+      setUpdatingEditAccessId(null);
+    }
+  };
 
   const updateBranch = async (userId: string, branchId: string) => {
     setUpdatingBranchUserId(userId);
@@ -319,6 +340,7 @@ export function UsersTable({ users, roles, branches , isGm }: UsersTableProps) {
                     {/* <TableHead>Role</TableHead> */}
                     <TableHead>Branch</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead>Edit Access</TableHead>
                     {!isGm && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -341,6 +363,21 @@ export function UsersTable({ users, roles, branches , isGm }: UsersTableProps) {
                           <BranchSelect user={user} />
                         </TableCell>
                         <TableCell>{formatDate(user.createdAt)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={updatingEditAccessId === user.id || isGm}
+                            className={`font-medium ${user.canEdit ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}`}
+                            onClick={() => toggleEditAccess(user.id, user.canEdit)}
+                          >
+                            {updatingEditAccessId === user.id ? (
+                               <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : (
+                               user.canEdit ? "Enabled" : "Disabled"
+                            )}
+                          </Button>
+                        </TableCell>
                         {!isGm && (
                           <TableCell className="text-right">
                             <DropdownMenu>

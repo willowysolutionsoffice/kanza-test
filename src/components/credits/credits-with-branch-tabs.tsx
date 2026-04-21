@@ -10,6 +10,7 @@ type CreditsWithBranchTabsProps = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   creditsByBranch: { branchId: string; branchName: string; credits: any[] }[];
   userRole?: string;
+  canEdit?: boolean;
   isGm?: boolean;
   userBranchId?: string;
 };
@@ -18,6 +19,7 @@ export function CreditsWithBranchTabs({
   branches,
   creditsByBranch,
   userRole,
+  canEdit,
   isGm,
   userBranchId,
 }: CreditsWithBranchTabsProps) {
@@ -39,6 +41,7 @@ export function CreditsWithBranchTabs({
             <CreditFormDialog
               branchId={activeBranch}
               userRole={userRole}
+              canEdit={canEdit}
               userBranchId={userBranchId}
             />
           )}
@@ -73,6 +76,7 @@ export function CreditsWithBranchTabs({
               <CreditTable
                 data={credits}
                 userRole={userRole}
+                canEdit={canEdit}
                 branchId={branchId}
               />
             </TabsContent>

@@ -36,9 +36,10 @@ export function BalanceReceiptTable<TValue>({
   data: initialData,
   branchId,
   userRole,
-}: Omit<BalanceReceiptTableProps<TValue>, 'columns'> & { branchId?: string; userRole?: string }) {
-  // Create columns based on userRole
-  const columns = useMemo(() => balanceReceiptColumn(userRole), [userRole]);
+  canEdit,
+}: Omit<BalanceReceiptTableProps<TValue>, 'columns'> & { branchId?: string; userRole?: string; canEdit?: boolean }) {
+  // Create columns based on userRole and canEdit
+  const columns = useMemo(() => balanceReceiptColumn(userRole, canEdit), [userRole, canEdit]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [data, setData] = useState(initialData);

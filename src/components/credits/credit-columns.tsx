@@ -9,8 +9,9 @@ import { CreditFormDialog } from "./credit-form";
 import { CreditDeleteDialog } from "./credit-delete-dailog";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-export const creditColumns = (userRole?: string): ColumnDef<Credit>[] => {
+export const creditColumns = (userRole?: string, canEdit?: boolean): ColumnDef<Credit>[] => {
   const isAdmin = userRole?.toLowerCase() === "admin";
+  const hasEditAccess = isAdmin || !!canEdit;
   
   const columns: ColumnDef<Credit>[] = [
     {
@@ -46,13 +47,13 @@ export const creditColumns = (userRole?: string): ColumnDef<Credit>[] => {
     },
   ];
 
-  // Only add Actions column for admin users
-  if (isAdmin) {
+  // Only add Actions column for admin users or users with edit access
+  if (hasEditAccess) {
     columns.push({
       id: "actions",
       header: "Actions",
       cell: ({ row }) =>
-        row.original && <CreditInlineActions credit={row.original} userRole={userRole} />,
+        row.original && <CreditInlineActions credit={row.original} userRole={userRole} canEdit={canEdit} />,
     });
   }
 
@@ -62,15 +63,17 @@ export const creditColumns = (userRole?: string): ColumnDef<Credit>[] => {
 export const CreditInlineActions = ({
   credit,
   userRole,
+  canEdit,
 }: {
   credit: Credit;
   userRole?: string;
+  canEdit?: boolean;
 }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 
   const isAdmin = userRole?.toLowerCase() === "admin";
-  if (!isAdmin) return null;
+  if (!isAdmin && !canEdit) return null;
 
   return (
     <div className="flex items-center gap-2">

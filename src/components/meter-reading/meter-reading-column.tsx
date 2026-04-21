@@ -9,8 +9,9 @@ import { MeterReading } from "@/types/meter-reading";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { MeterReadingUpdateForm } from "./meter-reading-update-form";
 
-export const meterReadinColumns = (userRole?: string): ColumnDef<MeterReading>[] => {
+export const meterReadinColumns = (userRole?: string, canEdit?: boolean): ColumnDef<MeterReading>[] => {
   const isAdmin = userRole?.toLowerCase() === "admin";
+  const hasEditAccess = isAdmin || !!canEdit;
   
   const columns: ColumnDef<MeterReading>[] = [
     {
@@ -79,19 +80,19 @@ export const meterReadinColumns = (userRole?: string): ColumnDef<MeterReading>[]
     },
   ];
 
-  // Only add Actions column for admin users
-  if (isAdmin) {
+  // Only add Actions column for admin users or users with edit access
+  if (hasEditAccess) {
     columns.push({
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => <MeterReadingActions meterReading={row.original} />,
+      cell: ({ row }) => <MeterReadingActions meterReading={row.original} canEdit={canEdit} userRole={userRole} />,
     });
   }
 
   return columns;
 };
 
-const MeterReadingActions = ({ meterReading }: { meterReading: MeterReading }) => {
+const MeterReadingActions = ({ meterReading, canEdit, userRole }: { meterReading: MeterReading; canEdit?: boolean; userRole?: string }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 

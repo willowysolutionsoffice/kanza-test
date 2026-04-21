@@ -24,6 +24,7 @@ export type User = {
   banExpires: Date | null;
   branch: string;
   role: string;
+  canEdit?: boolean | null;
 };
 
 export type UsersTableProps = {
@@ -41,6 +42,7 @@ export type UserFormData = {
   confirmPassword: string;
   role: string;
   branch: string;
+  canEdit?: boolean;
 };
 
 export type UserFormProps = {
@@ -58,4 +60,5 @@ export interface UserProfile {
   image?: string | null;
   role?: string | null;
   branch?: string | null;
+  canEdit?: boolean | null;
 }

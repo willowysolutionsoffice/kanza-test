@@ -10,8 +10,9 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { Sales } from "@/types/sales";
 
 // Hook to get dynamic columns based on branch products
-export const useSalesColumns = (userRole?: string, branchId?: string): ColumnDef<Sales>[] => {
+export const useSalesColumns = (userRole?: string, branchId?: string, canEdit?: boolean): ColumnDef<Sales>[] => {
   const isAdmin = userRole?.toLowerCase() === "admin";
+  const hasEditAccess = isAdmin || !!canEdit;
   const [branchProducts, setBranchProducts] = useState<Array<{ productName: string }>>([]);
   
   // Fetch branch products to determine which columns to show
@@ -152,13 +153,13 @@ export const useSalesColumns = (userRole?: string, branchId?: string): ColumnDef
       header: "Total Amount",
       cell: ({ row }) => <div>{formatCurrency(row.original.rate)}</div>,
     },
-    // Only add Actions column for admin users
-    ...(isAdmin ? [{
+    // Only add Actions column for admin users or users with edit access
+    ...(hasEditAccess ? [{
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => <SalesActions sales={row.original} userRole={userRole} />,
+      cell: ({ row }) => <SalesActions sales={row.original} userRole={userRole} canEdit={canEdit} />,
     } as ColumnDef<Sales>] : []),
-  ], [hasXgDiesel, hasPowerPetrol, isAdmin, userRole]);
+  ], [hasXgDiesel, hasPowerPetrol, hasEditAccess, userRole, canEdit]);
 
   return columns;
 };
@@ -244,15 +245,17 @@ export const salesColumns = (userRole?: string): ColumnDef<Sales>[] => {
 const SalesActions = ({
   sales,
   userRole,
+  canEdit,
 }: {
   sales: Sales;
   userRole?: string;
+  canEdit?: boolean;
 }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 
   const isAdmin = userRole?.toLowerCase() === "admin";
-  if (!isAdmin) return null;
+  if (!isAdmin && !canEdit) return null;
 
   return (
     <>

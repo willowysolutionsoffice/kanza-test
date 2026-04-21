@@ -38,8 +38,9 @@ export function MeterReadingTable<TValue>({
   data: initialData,
   branchId,
   userRole,
-}: MeterReadingTableProps<TValue> & { branchId?: string; userRole?: string }) {
-  const columns = meterReadinColumns(userRole);
+  canEdit,
+}: MeterReadingTableProps<TValue> & { branchId?: string; userRole?: string; canEdit?: boolean }) {
+  const columns = meterReadinColumns(userRole, canEdit);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [data, setData] = useState(initialData);

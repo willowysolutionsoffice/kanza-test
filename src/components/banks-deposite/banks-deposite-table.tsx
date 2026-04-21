@@ -32,8 +32,9 @@ import { Button } from "@/components/ui/button";
 export function BankDepositeTable<TValue>({
   data: initialData,
   userRole,
-}: BankDepositeTableProps<TValue> & { userRole?: string }) {
-  const columns = bankDepositeColumns(userRole);
+  canEdit,
+}: BankDepositeTableProps<TValue> & { userRole?: string; canEdit?: boolean }) {
+  const columns = bankDepositeColumns(userRole, canEdit);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [data, setData] = useState(initialData);

@@ -92,6 +92,7 @@ export default async function CustomerPage() {
                   columns={customerColumns} 
                   branchId={branchId}
                   userRole={session.user.role || undefined}
+                  canEdit={session.user.canEdit || false}
                   userBranchId={userBranchId}
                 />
               </TabsContent>

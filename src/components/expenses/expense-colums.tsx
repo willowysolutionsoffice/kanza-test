@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-export const expenseColumns = (userRole?: string): ColumnDef<Expense>[] => {
+export const expenseColumns = (userRole?: string, canEdit?: boolean): ColumnDef<Expense>[] => {
   const isAdmin = userRole?.toLowerCase() === "admin";
+  const hasEditAccess = isAdmin || !!canEdit;
   
   const columns: ColumnDef<Expense>[] = [
     {
@@ -56,13 +57,13 @@ export const expenseColumns = (userRole?: string): ColumnDef<Expense>[] => {
     },
   ];
 
-  // Only add Actions column for admin users
-  if (isAdmin) {
+  // Only add Actions column for admin users or users with edit access
+  if (hasEditAccess) {
     columns.push({
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <ExpenseActions expense={row.original} userRole={userRole} />
+        <ExpenseActions expense={row.original} userRole={userRole} canEdit={canEdit} />
       ),
     });
   }
@@ -73,16 +74,18 @@ export const expenseColumns = (userRole?: string): ColumnDef<Expense>[] => {
 const ExpenseActions = ({
   expense,
   userRole,
+  canEdit,
 }: {
   expense: Expense;
   userRole?: string;
+  canEdit?: boolean;
 }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 
-  // Only allow admin users to see action buttons
+  // Only allow admin users or users with edit access to see action buttons
   const isAdmin = userRole?.toLowerCase() === "admin";
-  if (!isAdmin) return null;
+  if (!isAdmin && !canEdit) return null;
 
   return (
     <>

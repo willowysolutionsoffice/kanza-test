@@ -33,8 +33,13 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { creditColumns } from "./credit-columns";
 
-export function CreditTable<TValue>({ data: initialData, branchId, userRole }: CreditTableProps<TValue> & { branchId?: string; userRole?: string }) {
-  const columns = creditColumns(userRole);
+export function CreditTable<TValue>({
+  data: initialData,
+  branchId,
+  userRole,
+  canEdit,
+}: CreditTableProps<TValue> & { branchId?: string; userRole?: string; canEdit?: boolean }) {
+  const columns = creditColumns(userRole, canEdit);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [data, setData] = useState(initialData);

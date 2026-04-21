@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ErrorMessage } from '@/components/ui/error-message';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { UserFormProps, UserFormData } from '@/types/user';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ export function UserForm({ roles, branches, onSuccess, initialData, isEdit }: Us
       confirmPassword: '',
       role: initialData?.role || '',
       branch: initialData?.branch || '',
+      canEdit: initialData?.canEdit || false,
     },
   });
 
@@ -53,6 +55,7 @@ export function UserForm({ roles, branches, onSuccess, initialData, isEdit }: Us
         confirmPassword: '',
         role: initialData.role || '',
         branch:initialData.branch || '',
+        canEdit: initialData.canEdit || false,
       });
     }
   }, [initialData, form]);
@@ -266,6 +269,30 @@ export function UserForm({ roles, branches, onSuccess, initialData, isEdit }: Us
             )}
           />
         </div>
+
+          <FormField
+            control={form.control}
+            name="canEdit"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    Enable Editing Access
+                  </FormLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Allow this user to edit and delete records for their branch.
+                  </p>
+                </div>
+              </FormItem>
+            )}
+          />
 
           <div className="flex justify-end pt-4">
             <Button type="submit" disabled={isSubmitting} className="w-full">

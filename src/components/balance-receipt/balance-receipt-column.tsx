@@ -9,9 +9,10 @@ import { BalanceReceiptFormDialog } from "./balance-receipt-form";
 import { BalanceReceiptDeleteDialog } from "./balance-receipt-delete-dialog";
 import { formatCurrency } from "@/lib/utils";
 
-export const balanceReceiptColumn = (userRole?: string): ColumnDef<BalanceReceipt>[] => {
+export const balanceReceiptColumn = (userRole?: string, canEdit?: boolean): ColumnDef<BalanceReceipt>[] => {
   const isAdmin = userRole?.toLowerCase() === "admin";
   const isGm = userRole?.toLowerCase() === "gm";
+  const hasEditAccess = (isAdmin || !!canEdit) && !isGm;
 
   const columns: ColumnDef<BalanceReceipt>[] = [
     {
@@ -47,13 +48,13 @@ export const balanceReceiptColumn = (userRole?: string): ColumnDef<BalanceReceip
     },
   ];
 
-  // Only add Actions column for admin users (not GM)
-  if (isAdmin && !isGm) {
+  // Only add Actions column for admin users or users with edit access (not GM)
+  if (hasEditAccess) {
     columns.push({
       id: "actions",
       header: "Actions",
       cell: ({ row }) =>
-        row.original && <BalanceReceiptInlineActions balanceReceipt={row.original} userRole={userRole} />,
+        row.original && <BalanceReceiptInlineActions balanceReceipt={row.original} userRole={userRole} canEdit={canEdit} />,
     });
   }
 
@@ -63,15 +64,17 @@ export const balanceReceiptColumn = (userRole?: string): ColumnDef<BalanceReceip
 export const BalanceReceiptInlineActions = ({
   balanceReceipt,
   userRole,
+  canEdit,
 }: {
   balanceReceipt: BalanceReceipt;
   userRole?: string;
+  canEdit?: boolean;
 }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 
   const isAdmin = userRole?.toLowerCase() === "admin";
-  if (!isAdmin) return null;
+  if (!isAdmin && !canEdit) return null;
 
   return (
     <div className="flex items-center gap-2">

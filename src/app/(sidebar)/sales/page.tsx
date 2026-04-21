@@ -150,6 +150,7 @@ export default async function SalesPage() {
                   <SalesTableWrapper 
                     data={sales} 
                     userRole={session.user.role || undefined} 
+                    canEdit={session.user.canEdit || false}
                     branchId={branchId}
                   />
                 </TabsContent>

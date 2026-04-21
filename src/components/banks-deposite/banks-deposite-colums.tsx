@@ -10,9 +10,11 @@ import { BankDeposite } from "@/types/bank-deposite";
 import { formatDate } from "@/lib/utils";
 
 export const bankDepositeColumns = (
-  userRole?: string
+  userRole?: string,
+  canEdit?: boolean
 ): ColumnDef<BankDeposite>[] => {
   const isAdmin = userRole?.toLowerCase() === "admin";
+  const hasEditAccess = isAdmin || !!canEdit;
   
   const columns: ColumnDef<BankDeposite>[] = [
     {
@@ -45,8 +47,8 @@ export const bankDepositeColumns = (
     },
   ];
 
-  // Only add Actions column for admin users
-  if (isAdmin) {
+  // Only add Actions column for admin users or users with edit access
+  if (hasEditAccess) {
     columns.push({
       id: "actions",
       header: "Actions",
@@ -55,6 +57,7 @@ export const bankDepositeColumns = (
           <BankDepositeInlineActions
             bankDeposite={row.original}
             userRole={userRole}
+            canEdit={canEdit}
           />
         ),
     });
@@ -66,15 +69,17 @@ export const bankDepositeColumns = (
 export const BankDepositeInlineActions = ({
   bankDeposite,
   userRole,
+  canEdit,
 }: {
   bankDeposite: BankDeposite;
   userRole?: string;
+  canEdit?: boolean;
 }) => {
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 
   const isAdmin = userRole?.toLowerCase() === "admin";
-  if (!isAdmin) return null;
+  if (!isAdmin && !canEdit) return null;
 
   return (
     <div className="flex items-center gap-2">

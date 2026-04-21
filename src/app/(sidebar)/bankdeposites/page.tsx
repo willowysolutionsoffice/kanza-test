@@ -67,6 +67,7 @@ const depositsByBranch = visibleBranches.map((branch: { id: string; name: string
         branches={visibleBranches} 
         depositsByBranch={depositsByBranch}
         userRole={session.user.role || undefined}
+        canEdit={session.user.canEdit || false}
         userBranchId={userBranchId}
         isGm={isGm}
       />

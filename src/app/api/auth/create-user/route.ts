@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, email, password, role, branch } = result.data;
+    const { name, email, password, role, branch, canEdit } = result.data;
 
     const { user } = await auth.api.createUser({
       body: {
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
         role: role as "admin" | "user",
         data: {
           branch,
+          canEdit,
         },
       },
     });
