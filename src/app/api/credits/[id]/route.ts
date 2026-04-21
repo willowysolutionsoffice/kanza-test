@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { creditSchemaWithId } from "@/schemas/credit-schema";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,6 +112,16 @@ export async function PATCH(
       return [updated];
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'UPDATE',
+      module: 'Credits',
+      details: { id, changes: data }
+    });
+
     return NextResponse.json({ data: updatedCredit }, { status: 200 });
   } catch (error) {
     console.error("Error updating credit:", error);
@@ -162,6 +175,16 @@ export async function DELETE(
       }
 
       return [removedCredit];
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'DELETE',
+      module: 'Credits',
+      details: { id, deletedData: existingCredit }
     });
 
     return NextResponse.json({ data: deletedCredit }, { status: 200 });

@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 import { salesSchemaWithId } from "@/schemas/sales-schema";
 import { revalidatePath } from "next/cache";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -119,6 +122,16 @@ export async function PATCH(
       return [updated];
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'UPDATE',
+      module: 'Sales',
+      details: { id: saleId, changes: saleData }
+    });
+
     revalidatePath("/sales");
     return NextResponse.json({ data: updatedSale }, { status: 200 });
   } catch (error) {
@@ -156,6 +169,16 @@ export async function DELETE(
           tx
         );
       }
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'DELETE',
+      module: 'Sales',
+      details: { id: saleId, deletedData: existingSale }
     });
 
     revalidatePath("/sales");

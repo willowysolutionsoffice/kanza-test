@@ -5,6 +5,7 @@ import { creditSchema } from "@/schemas/credit-schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { createLog } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -85,6 +86,15 @@ export async function POST(req: NextRequest) {
       }
 
       return [createdCredit];
+    });
+
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'CREATE',
+      module: 'Credits',
+      details: { id: newCredit.id, amount: newCredit.amount, customer: customer.name }
     });
 
     revalidatePath("/credits");

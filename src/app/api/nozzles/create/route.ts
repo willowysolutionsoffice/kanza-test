@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { nozzleSchema } from "@/schemas/nozzle-schema";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,6 +50,16 @@ export async function POST(req: NextRequest) {
       data: {
         ...result.data,
       },
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'CREATE',
+        module: 'Nozzles',
+        details: { id: nozzle.id, name: nozzle.nozzleName, machineId: nozzle.machineId }
     });
 
     return NextResponse.json({ data: nozzle }, { status: 201 });

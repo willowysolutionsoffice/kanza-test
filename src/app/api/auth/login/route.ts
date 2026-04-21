@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loginSchema } from "@/schemas/user-schema";
 import { auth } from "@/lib/auth";
+import { createLog } from "@/lib/logger";
+import { headers } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,6 +26,18 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    
+    // Log the successful login
+    const reqHeaders = await headers();
+    await createLog({
+        userId: signInResult.user.id,
+        userEmail: signInResult.user.email,
+        userName: signInResult.user.name,
+        action: 'LOGIN',
+        module: 'AUTH',
+        ipAddress: reqHeaders.get('x-forwarded-for') || reqHeaders.get('x-real-ip') || '',
+        userAgent: reqHeaders.get('user-agent') || '',
+    });
 
     return NextResponse.json(
       { success: true, message: "Login successful", redirectTo: "/dashboard" },

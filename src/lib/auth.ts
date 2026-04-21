@@ -39,4 +39,45 @@ export const auth = betterAuth({
     }),
     nextCookies(), // This MUST be the last plugin
   ],
+  events: {
+    async onSessionCreate({ session, user }: { session: any, user: any }) {
+      try {
+        await prisma.activityLog.create({
+          data: {
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.name,
+            action: 'LOGIN',
+            module: 'AUTH',
+            ipAddress: session.ipAddress || '',
+            userAgent: session.userAgent || '',
+          }
+        });
+      } catch (e) {
+        console.error('Login logging failed:', e);
+      }
+    },
+    async onSessionDelete({ session }: { session: any }) {
+        try {
+          // Note: user might be harder to get here directly depending on better-auth version
+          // but session usually has userId
+          if (session.userId) {
+            const user = await prisma.user.findUnique({ where: { id: session.userId } });
+            await prisma.activityLog.create({
+                data: {
+                  userId: session.userId,
+                  userEmail: user?.email || '',
+                  userName: user?.name || '',
+                  action: 'LOGOUT',
+                  module: 'AUTH',
+                  ipAddress: session.ipAddress || '',
+                  userAgent: session.userAgent || '',
+                }
+            });
+          }
+        } catch (e) {
+          console.error('Logout logging failed:', e);
+        }
+    }
+  }
 });

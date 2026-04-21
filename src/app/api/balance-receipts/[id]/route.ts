@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { balanceReceiptSchemaWithId } from "@/schemas/balance-receipt";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +45,16 @@ export async function PATCH(
       data,
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'UPDATE',
+      module: 'BalanceReceipts',
+      details: { id, changes: data }
+    });
+
     return NextResponse.json({ data: balanceReceipt }, { status: 200 });
   } catch (error) {
     console.error("Error updating balance Receipt:", error);
@@ -69,6 +82,16 @@ export async function DELETE(
   try {
     const deletedBalanceReceipt = await prisma.balanceReceipt.delete({
       where: { id },
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'DELETE',
+      module: 'BalanceReceipts',
+      details: { id, deletedData: deletedBalanceReceipt }
     });
 
     return NextResponse.json({ data: deletedBalanceReceipt }, { status: 200 });

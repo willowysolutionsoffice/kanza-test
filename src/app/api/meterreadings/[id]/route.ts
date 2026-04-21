@@ -4,6 +4,9 @@ import { meterReadingUpdateSchema } from "@/schemas/meter-reading-schema";
 import { ObjectId } from "mongodb";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
 import { getISTDateRangeForQuery } from "@/lib/date-utils";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -236,6 +239,16 @@ export async function PATCH(
       return updated;
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'UPDATE',
+      module: 'MeterReadings',
+      details: { id, changes: updateData }
+    });
+
     return NextResponse.json({ data: results }, { status: 200 });
   } catch (error) {
     console.error("Error updating meter reading:", error);
@@ -356,6 +369,16 @@ export async function DELETE(
       }
 
       return removed;
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'DELETE',
+      module: 'MeterReadings',
+      details: { id, deletedData: existingReading }
     });
 
     return NextResponse.json({ data: results }, { status: 200 });

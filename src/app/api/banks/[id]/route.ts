@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { bankSchemaWithId } from "@/schemas/bank-schema";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +45,16 @@ export async function PATCH(
       data,
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'UPDATE',
+        module: 'Banks',
+        details: { id, changes: data }
+    });
+
     return NextResponse.json({ data: banks }, { status: 200 });
   } catch (error) {
     console.error("Error updating bank:", error);
@@ -69,6 +82,16 @@ export async function DELETE(
 
     const deletedBank = await prisma.bank.delete({
       where: { id },
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'DELETE',
+        module: 'Banks',
+        details: { id, deletedData: deletedBank }
     });
 
     return NextResponse.json({ data: deletedBank }, { status: 200 });

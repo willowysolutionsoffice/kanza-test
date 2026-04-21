@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { tankSchemaWithId } from "@/schemas/tank-schema";
 import { ObjectId } from "mongodb";
 import { Prisma } from "@prisma/client";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +44,16 @@ export async function PATCH(
     const tank = await prisma.tank.update({
       where: { id },
       data,
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'UPDATE',
+        module: 'Tanks',
+        details: { id, changes: data }
     });
 
     return NextResponse.json({ data: tank }, { status: 200 });
@@ -94,6 +107,16 @@ export async function DELETE(
   try {
     const deletedTank = await prisma.tank.delete({
       where: { id },
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'DELETE',
+        module: 'Tanks',
+        details: { id, deletedData: deletedTank }
     });
 
     return NextResponse.json({ data: deletedTank }, { status: 200 });

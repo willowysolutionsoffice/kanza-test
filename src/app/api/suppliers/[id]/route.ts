@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { supplierSchemaWithId } from "@/schemas/supplier-schema";
 import { ObjectId } from "mongodb";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +43,16 @@ export async function PATCH(
     const supplier = await prisma.supplier.update({
       where: { id },
       data,
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'UPDATE',
+        module: 'Suppliers',
+        details: { id, changes: data }
     });
 
     return NextResponse.json({ data: supplier }, { status: 200 });
@@ -90,6 +103,16 @@ export async function DELETE(
 
     const deletedSupplier = await prisma.supplier.delete({
       where: { id },
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'DELETE',
+        module: 'Suppliers',
+        details: { id, deletedData: deletedSupplier }
     });
 
     return NextResponse.json({ data: deletedSupplier }, { status: 200 });

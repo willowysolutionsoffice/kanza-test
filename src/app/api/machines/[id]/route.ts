@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { machineSchemaWithId } from "@/schemas/machine-schema";
 import { ObjectId } from "mongodb";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -45,6 +48,16 @@ export async function PATCH(
       },
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'UPDATE',
+        module: 'Machines',
+        details: { id, name: rest.machineName }
+    });
+
     return NextResponse.json({ data: machines }, { status: 200 });
   } catch (error) {
     console.error("Error updating machines:", error);
@@ -72,6 +85,16 @@ export async function DELETE(
   try {
     const deletedMachines = await prisma.machine.delete({
       where: { id },
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'DELETE',
+        module: 'Machines',
+        details: { id, deletedData: deletedMachines }
     });
 
     return NextResponse.json({ data: deletedMachines }, { status: 200 });

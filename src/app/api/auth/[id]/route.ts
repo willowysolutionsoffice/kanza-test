@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createLog } from "@/lib/logger";
+import { headers } from "next/headers";
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -70,6 +72,16 @@ export async function PATCH(
         // Continue even if auth update fails, prisma update should work
       }
     }
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'UPDATE',
+      module: 'Users',
+      details: { updatedUserId: id, changes: updateData }
+    });
 
     return NextResponse.json(
       { success: true, message: "User updated successfully" },

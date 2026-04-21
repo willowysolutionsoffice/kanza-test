@@ -573,3 +573,16 @@ model Verification {
 
   @@map("verification")
 }
+
+model ActivityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?
+  userEmail String?
+  userName  String?
+  action    String   // "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT"
+  module    String?  // "Sales", "Expenses", "Users", etc.
+  details   String?  // JSON string of changes
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}

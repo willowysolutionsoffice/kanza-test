@@ -5,6 +5,7 @@ import { expenseSchema } from "@/schemas/expense-schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { createLog } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,6 +70,15 @@ export async function POST(req: NextRequest) {
       }
 
       return newExpense;
+    });
+
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'CREATE',
+      module: 'Expenses',
+      details: { id: expense.id, description: expense.description, amount: expense.amount }
     });
 
     revalidatePath("/expenses");

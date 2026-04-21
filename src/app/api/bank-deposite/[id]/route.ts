@@ -3,6 +3,9 @@ import { ObjectId } from "mongodb";
 import { bankDepositeSchemaWithId } from "@/schemas/bank-deposite-schema";
 import { NextResponse } from "next/server";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,25 +35,20 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    console.log("Bank deposit update request body:", body);
     
     // Filter out empty strings that could cause ObjectID issues
     const cleanedBody = Object.fromEntries(
       Object.entries(body).filter(([key, value]) => {
         if (value === "" || value === null || value === undefined) {
-          console.log(`Filtering out empty value for key: ${key}`);
           return false;
         }
         return true;
       })
     );
     
-    console.log("Cleaned body:", cleanedBody);
-    
     const parsed = bankDepositeSchemaWithId.safeParse({ id, ...cleanedBody });
 
     if (!parsed.success) {
-      console.log("Validation errors:", parsed.error.errors);
       return NextResponse.json(
         { error: "Invalid input", issues: parsed.error.errors },
         { status: 400 }
@@ -140,6 +138,16 @@ export async function PATCH(
       return [updatedDeposit];
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'UPDATE',
+        module: 'BankDeposits',
+        details: { id, changes: data }
+    });
+
     return NextResponse.json({ data: bankDeposite }, { status: 200 });
   } catch (error) {
     console.error("Error updating bank deposit:", error);
@@ -193,6 +201,16 @@ export async function DELETE(
       }
 
       return [removedDeposit];
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'DELETE',
+        module: 'BankDeposits',
+        details: { id, deletedData: existingDeposite }
     });
 
     return NextResponse.json({ data: deletedBankDeposite }, { status: 200 });

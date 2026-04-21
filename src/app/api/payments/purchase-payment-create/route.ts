@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { supplierPaymentSchema } from "@/schemas/supplier-payment-schema";
+import { createLog } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,6 +57,15 @@ export async function POST(req: NextRequest) {
         },
       }),
     ]);
+
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'CREATE',
+        module: 'PurchasePayments',
+        details: { id: payment.id, amount: payment.amount, supplierId: payment.supplierId }
+    });
 
     revalidatePath("/payments");
 

@@ -181,7 +181,11 @@ export const SIDEBAR_DATA: SidebarData = {
       url: '/admin/suppliers',
       icon: IconUserPlus,
     },
-
+    {
+      title: 'Activity Log',
+      url: '/admin/activity-log',
+      icon: IconFileText,
+    },
   ],
 
   // only branch can see this navigation

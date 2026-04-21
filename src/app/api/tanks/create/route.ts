@@ -3,6 +3,9 @@ import { tankSchema } from "@/schemas/tank-schema";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 //create new tank
 
@@ -25,6 +28,17 @@ export async function POST(req: NextRequest) {
         ...result.data,
       },
     });
+    
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'CREATE',
+        module: 'Tanks',
+        details: { id: tank.id, name: tank.tankName, capacity: tank.capacity }
+    });
+
     revalidatePath("/tanks");
 
     return NextResponse.json({ data: tank }, { status: 201 });
@@ -59,5 +73,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-

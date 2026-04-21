@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { expenseSchemaWithId } from "@/schemas/expense-schema";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,6 +128,16 @@ export async function PATCH(
       return [updated];
     });
 
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'UPDATE',
+      module: 'Expenses',
+      details: { id, changes: data }
+    });
+
     return NextResponse.json({ data: updatedExpense }, { status: 200 });
   } catch (error) {
     console.error("Error updating expense:", error);
@@ -195,6 +208,16 @@ export async function DELETE(
       }
 
       return [removed];
+    });
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'DELETE',
+      module: 'Expenses',
+      details: { id, deletedData: oldExpense }
     });
 
     return NextResponse.json({ data: deletedExpense }, { status: 200 });

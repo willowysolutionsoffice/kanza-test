@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { purchaseSchema } from "@/schemas/purchase-schema";
+import { createLog } from "@/lib/logger";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,6 +71,16 @@ export async function POST(req: NextRequest) {
         },
       });
     }
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    await createLog({
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        userName: session?.user?.name,
+        action: 'CREATE',
+        module: 'Purchases',
+        details: { id: purchase.id, amount: purchase.purchasePrice, supplierId: purchase.supplierId }
+    });
 
     return NextResponse.json({ data: purchase }, { status: 201 });
   } catch (error) {

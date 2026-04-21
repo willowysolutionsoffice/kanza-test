@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { createLog } from "@/lib/logger";
 
 // NEW: schema for batch meter readings
 const batchMeterReadingSchema = z.object({
@@ -231,6 +232,15 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'CREATE',
+      module: 'MeterReadings',
+      details: { count: createdReadings.length, date: result.data.date, shift: result.data.shift }
+    });
 
     revalidatePath("/meter-reading");
 

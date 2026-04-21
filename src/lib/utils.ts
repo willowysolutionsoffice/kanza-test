@@ -72,11 +72,7 @@ export function formatDate(
 ): string {
   const parsedDate = typeof date === 'string' ? new Date(date) : date;
   
-  // If the date is stored as UTC but represents IST date (like 2025-09-21T18:30:00.000Z for Sep 22 IST)
-  // We need to add 5.5 hours to get the correct IST date
-  const istDate = new Date(parsedDate.getTime() + (5.5 * 60 * 60 * 1000));
-  
-  return new Intl.DateTimeFormat(locale, options).format(istDate);
+  return new Intl.DateTimeFormat(locale, options).format(parsedDate);
 }
 
 /**
@@ -99,8 +95,5 @@ export function formatDateTime(
 ): string {
   const parsedDate = typeof date === 'string' ? new Date(date) : date;
   
-  // If the date is stored as UTC but represents IST date, add 5.5 hours
-  const istDate = new Date(parsedDate.getTime() + (5.5 * 60 * 60 * 1000));
-  
-  return new Intl.DateTimeFormat(locale, options).format(istDate);
+  return new Intl.DateTimeFormat(locale, options).format(parsedDate);
 }

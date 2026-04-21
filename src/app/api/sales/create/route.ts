@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { updateBalanceReceiptIST } from "@/lib/ist-balance-utils";
+import { createLog } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -119,6 +120,15 @@ export async function POST(req: NextRequest) {
       }
 
       return newSale;
+    });
+
+    await createLog({
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      action: 'CREATE',
+      module: 'Sales',
+      details: { id: sale.id, date: sale.date, cashPayment: sale.cashPayment }
     });
 
     revalidatePath("/sales");
