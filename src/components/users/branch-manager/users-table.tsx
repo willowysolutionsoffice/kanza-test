@@ -61,6 +61,7 @@ export function UsersTable({ users, roles, branches , isGm }: UsersTableProps) {
   const [passwordUpdateUser, setPasswordUpdateUser] = useState<User | null>(null);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [updatingEditAccessId, setUpdatingEditAccessId] = useState<string | null>(null);
+  const [accessConfirmationUser, setAccessConfirmationUser] = useState<User | null>(null);
 
   const toggleEditAccess = async (userId: string, currentStatus: boolean | null | undefined) => {
     setUpdatingEditAccessId(userId);
@@ -369,7 +370,13 @@ export function UsersTable({ users, roles, branches , isGm }: UsersTableProps) {
                             size="sm"
                             disabled={updatingEditAccessId === user.id || isGm}
                             className={`font-medium ${user.canEdit ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}`}
-                            onClick={() => toggleEditAccess(user.id, user.canEdit)}
+                            onClick={() => {
+                              if (!user.canEdit) {
+                                setAccessConfirmationUser(user);
+                              } else {
+                                toggleEditAccess(user.id, user.canEdit);
+                              }
+                            }}
                           >
                             {updatingEditAccessId === user.id ? (
                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -498,6 +505,31 @@ export function UsersTable({ users, roles, branches , isGm }: UsersTableProps) {
               ) : (
                 'Delete User'
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Edit Access Confirmation Dialog */}
+      <AlertDialog open={!!accessConfirmationUser} onOpenChange={(open) => !open && setAccessConfirmationUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Grant Editing Access?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to give <span className="font-semibold">{accessConfirmationUser?.name}</span> editing access? This will allow them to modify or delete financial records for their branch.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAccessConfirmationUser(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (accessConfirmationUser) {
+                  toggleEditAccess(accessConfirmationUser.id, accessConfirmationUser.canEdit);
+                  setAccessConfirmationUser(null);
+                }
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -25,6 +25,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { UserFormProps, UserFormData } from '@/types/user';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type CreateUserFormData = UserFormData;
 
@@ -94,6 +104,8 @@ export function UserForm({ roles, branches, onSuccess, initialData, isEdit }: Us
       setIsSubmitting(false);
     }
   };
+
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -278,7 +290,13 @@ export function UserForm({ roles, branches, onSuccess, initialData, isEdit }: Us
                 <FormControl>
                   <Checkbox
                     checked={field.value ?? false}
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => {
+                      if (checked === true) {
+                        setShowEditConfirm(true);
+                      } else {
+                        field.onChange(false);
+                      }
+                    }}
                     disabled={isSubmitting}
                   />
                 </FormControl>
@@ -307,6 +325,29 @@ export function UserForm({ roles, branches, onSuccess, initialData, isEdit }: Us
           </div>
         </form>
       </Form>
+
+      <AlertDialog open={showEditConfirm} onOpenChange={setShowEditConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Grant Editing Access?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to give this user editing access? This will allow them to modify or delete financial records for their branch.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                form.setValue('canEdit', true);
+                setShowEditConfirm(false);
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
