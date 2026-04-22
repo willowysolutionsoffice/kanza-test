@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > A modern, production-ready admin dashboard template built with Next.js 15, React 19, TypeScript, Tailwind CSS v4, and ShadCN UI. Perfect foundation for building professional admin interfaces with enterprise-grade architecture.
-new added
+
 ## ✨ Features
 
 - 🚀 **Next.js 15** with App Router & React 19
