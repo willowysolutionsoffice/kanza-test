@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { paymentSchemaWithId } from "@/schemas/payment-schema";
+import { updateBalanceReceiptForPaymentIST } from "@/lib/ist-balance-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
