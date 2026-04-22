@@ -50,7 +50,7 @@ export default async function SalesReportPage({
   const userBranchId = typeof session.user.branch === 'string' ? session.user.branch : undefined;
   
   // Forward cookies
-  const cookie = cookies().toString();
+  const cookie = hdrs.get("cookie") ?? "";
   
   // Fetch branches first
   const branchesRes = await fetch(`${proto}://${host}/api/branch`, {

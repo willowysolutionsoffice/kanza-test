@@ -122,66 +122,35 @@ export async function PATCH(
         }
       }
 
-      // 3. Adjust BalanceReceipt based on date and amount changes
-      if (oldDate.toDateString() === newDate.toDateString()) {
-        // Same date → just apply amount difference
-        const receipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: oldPayment.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        if (receipt && amountDiff !== 0) {
-          await tx.balanceReceipt.update({
-            where: { id: receipt.id },
-            data: {
-              amount:
-                amountDiff > 0
-                  ? { increment: amountDiff }
-                  : { decrement: Math.abs(amountDiff) },
-            },
-          });
-        }
-      } else {
-        // Date changed → reverse from old receipt, apply to new receipt
-        const oldReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: oldPayment.branchId,
-            date: {
-              gte: new Date(oldDate.setHours(0, 0, 0, 0)),
-              lte: new Date(oldDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        const newReceipt = await tx.balanceReceipt.findFirst({
-          where: {
-            branchId: oldPayment.branchId,
-            date: {
-              gte: new Date(newDate.setHours(0, 0, 0, 0)),
-              lte: new Date(newDate.setHours(23, 59, 59, 999)),
-            },
-          },
-        });
-
-        // 2a. Restore old receipt with full old amount
-        if (oldReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: oldReceipt.id },
-            data: { amount: { decrement: oldAmount } },
-          });
-        }
-
-        // 2b. Add new amount to new receipt
-        if (newReceipt) {
-          await tx.balanceReceipt.update({
-            where: { id: newReceipt.id },
-            data: { amount: { increment: data.paidAmount } },
-          });
+      // 3. Adjust BalanceReceipt using IST-aware logic
+      if (oldPayment.branchId) {
+        if (oldDate.toDateString() === newDate.toDateString()) {
+          // Same date → update balance by the difference
+          if (amountDiff !== 0) {
+            await updateBalanceReceiptForPaymentIST(
+              oldPayment.branchId, 
+              oldDate, 
+              amountDiff,
+              tx
+            );
+          }
+        } else {
+          // Date changed → reverse from old, apply to new
+          // 3a. Restore old balance (cancel the old payment)
+          await updateBalanceReceiptForPaymentIST(
+            oldPayment.branchId,
+            oldDate,
+            -oldAmount,
+            tx
+          );
+          
+          // 3b. Add to new balance (apply the updated payment)
+          await updateBalanceReceiptForPaymentIST(
+            oldPayment.branchId,
+            newDate,
+            data.paidAmount,
+            tx
+          );
         }
       }
 
@@ -229,7 +198,6 @@ export async function DELETE(
     }
 
     const paymentDate = new Date(oldPayment.paidOn);
-    // Handle different field names between CustomerPayment and PaymentHistory
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const oldAmount = 'amount' in oldPayment ? (oldPayment as any).amount : (oldPayment as any).paidAmount;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -239,28 +207,22 @@ export async function DELETE(
       // 1. Delete from both collections if they exist
       let removed;
       
-      // Check if payment exists in CustomerPayment
       const customerPayment = await tx.customerPayment.findUnique({ where: { id } });
       if (customerPayment) {
         removed = await tx.customerPayment.delete({ where: { id } });
       }
       
-      // Check if payment exists in PaymentHistory and delete it too
       const paymentHistory = await tx.paymentHistory.findUnique({ where: { id } });
       if (paymentHistory) {
-        // If we already deleted from CustomerPayment, just delete from PaymentHistory
         if (!customerPayment) {
           removed = await tx.paymentHistory.delete({ where: { id } });
         } else {
-          // If both exist, delete from PaymentHistory too (but don't overwrite removed)
           await tx.paymentHistory.delete({ where: { id } });
         }
       }
 
-      // 2. Restore customer outstanding balance (add back the amount)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (customerId && ('customerId' in oldPayment ? (oldPayment as any).customerId : (oldPayment as any).customerId)) {
-        // For customer payments, restore outstanding balance
+      // 2. Restore customer outstanding balance
+      if (customerId) {
         await tx.customer.update({
           where: { id: customerId },
           data: {
@@ -269,22 +231,14 @@ export async function DELETE(
         });
       }
 
-      // 3. Decrement from BalanceReceipt
-      const existingReceipt = await tx.balanceReceipt.findFirst({
-        where: {
-          branchId: oldPayment.branchId,
-          date: {
-            gte: new Date(paymentDate.setHours(0, 0, 0, 0)),
-            lte: new Date(paymentDate.setHours(23, 59, 59, 999)),
-          },
-        },
-      });
-
-      if (existingReceipt) {
-        await tx.balanceReceipt.update({
-          where: { id: existingReceipt.id },
-          data: { amount: { decrement: oldAmount } },
-        });
+      // 3. Decrement from BalanceReceipt with automated ripple
+      if (oldPayment.branchId) {
+        await updateBalanceReceiptForPaymentIST(
+          oldPayment.branchId,
+          paymentDate,
+          -oldAmount, // Subtract the payment amount that is being deleted
+          tx
+        );
       }
 
       return [removed];

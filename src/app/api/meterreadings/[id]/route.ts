@@ -204,36 +204,46 @@ export async function PATCH(
 
       // 5. Update Sale and BalanceReceipt ripple
       const amountDiff = newTotalAmount - existingReading.totalAmount;
-      if (amountDiff !== 0 && existingReading.branchId && existingReading.date) {
-        // Find existing sale for this date and branch
-        const dateString = existingReading.date.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-        const { start, end } = getISTDateRangeForQuery(dateString);
-        
-        const existingSale = await tx.sale.findFirst({
-          where: {
-            branchId: existingReading.branchId,
-            date: { gte: start, lte: end }
-          }
-        });
+      const oldDate = existingReading.date;
+      const newDate = updateData.date || existingReading.date;
 
-        if (existingSale) {
-          // Update the sale rate and cashPayment
-          await tx.sale.update({
-            where: { id: existingSale.id },
-            data: {
-              rate: { increment: amountDiff },
-              cashPayment: { increment: amountDiff }
-            }
+      if (existingReading.branchId && oldDate && newDate) {
+        const isDateChanged = oldDate.toDateString() !== newDate.toDateString();
+
+        // 5a. Update the Sale record (if it exists for the relevant date)
+        const updateSaleForDate = async (targetDate: Date, delta: number) => {
+          const dateString = targetDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+          const { start, end } = getISTDateRangeForQuery(dateString);
+          const sale = await tx.sale.findFirst({
+            where: { branchId: existingReading.branchId, date: { gte: start, lte: end } }
           });
-        }
+          if (sale) {
+            await tx.sale.update({
+              where: { id: sale.id },
+              data: {
+                rate: { increment: delta },
+                cashPayment: { increment: delta }
+              }
+            });
+          }
+        };
 
-        // Ripple the balance correction forward
-        await updateBalanceReceiptIST(
-          existingReading.branchId,
-          existingReading.date,
-          amountDiff,
-          tx
-        );
+        if (!isDateChanged) {
+          // Same date → update balance by the difference
+          if (amountDiff !== 0) {
+            await updateSaleForDate(oldDate, amountDiff);
+            await updateBalanceReceiptIST(existingReading.branchId, oldDate, amountDiff, tx);
+          }
+        } else {
+          // Date changed → reverse from old, apply to new
+          // Subtract old amount from old date
+          await updateSaleForDate(oldDate, -existingReading.totalAmount);
+          await updateBalanceReceiptIST(existingReading.branchId, oldDate, -existingReading.totalAmount, tx);
+          
+          // Add new amount to new date
+          await updateSaleForDate(newDate, newTotalAmount);
+          await updateBalanceReceiptIST(existingReading.branchId, newDate, newTotalAmount, tx);
+        }
       }
 
       return updated;

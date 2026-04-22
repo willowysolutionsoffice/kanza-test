@@ -5,6 +5,7 @@ import { balanceReceiptSchemaWithId } from "@/schemas/balance-receipt";
 import { createLog } from "@/lib/logger";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { propagateBalanceCorrection } from "@/lib/ist-balance-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,9 +41,24 @@ export async function PATCH(
 
     const { id: _omitId, ...data } = parsed.data; void _omitId;
 
-    const balanceReceipt = await prisma.balanceReceipt.update({
-      where: { id },
-      data,
+    const oldReceipt = await prisma.balanceReceipt.findUnique({ where: { id } });
+    if (!oldReceipt) {
+      return NextResponse.json({ error: "Balance receipt not found" }, { status: 404 });
+    }
+
+    const delta = data.amount - oldReceipt.amount;
+
+    const balanceReceipt = await prisma.$transaction(async (tx) => {
+      const updated = await tx.balanceReceipt.update({
+        where: { id },
+        data,
+      });
+
+      if (delta !== 0 && oldReceipt.branchId) {
+        await propagateBalanceCorrection(oldReceipt.branchId, oldReceipt.date, delta, tx);
+      }
+
+      return updated;
     });
 
     const session = await auth.api.getSession({ headers: await headers() });
@@ -65,7 +81,7 @@ export async function PATCH(
   }
 }
 
-//DELETE
+// DELETE
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -80,8 +96,22 @@ export async function DELETE(
   }
 
   try {
-    const deletedBalanceReceipt = await prisma.balanceReceipt.delete({
-      where: { id },
+    const oldReceipt = await prisma.balanceReceipt.findUnique({ where: { id } });
+    if (!oldReceipt) {
+      return NextResponse.json({ error: "Balance receipt not found" }, { status: 404 });
+    }
+
+    const deletedBalanceReceipt = await prisma.$transaction(async (tx) => {
+      const removed = await tx.balanceReceipt.delete({
+        where: { id },
+      });
+
+      if (oldReceipt.branchId) {
+        // Ripple the negative of the deleted amount to subtract it from future dates
+        await propagateBalanceCorrection(oldReceipt.branchId, oldReceipt.date, -oldReceipt.amount, tx);
+      }
+
+      return removed;
     });
 
     const session = await auth.api.getSession({ headers: await headers() });

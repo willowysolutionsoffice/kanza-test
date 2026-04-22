@@ -25,7 +25,7 @@ export default async function SupplierReportPage() {
   const userBranchId = typeof session.user.branch === 'string' ? session.user.branch : undefined;
   
   // Forward cookies
-  const cookie = cookies().toString();
+  const cookie = hdrs.get("cookie") ?? "";
   
   // Fetch suppliers and branches in parallel
   const [suppliersRes, branchesRes] = await Promise.all([
