@@ -30,8 +30,31 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Get the last closed day for this branch
+    const lastClosedDay = await prisma.closedDay.findFirst({
+      where: {
+        branchId: branchId as string,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+      select: {
+        date: true,
+      },
+    });
+
+    const lastSaleDate = lastSale?.date;
+    const lastClosedDate = lastClosedDay?.date;
+
+    let finalLastDate = null;
+    if (lastSaleDate && lastClosedDate) {
+      finalLastDate = lastSaleDate > lastClosedDate ? lastSaleDate : lastClosedDate;
+    } else {
+      finalLastDate = lastSaleDate || lastClosedDate || null;
+    }
+
     return NextResponse.json({ 
-      lastDate: lastSale?.date || null 
+      lastDate: finalLastDate 
     }, { status: 200 });
   } catch (error) {
     console.error("Error fetching last sale date:", error);

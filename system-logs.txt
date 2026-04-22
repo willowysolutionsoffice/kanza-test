@@ -1,0 +1,10 @@
+[2026-04-22T07:34:50.825Z] [SERVER_ACTION] [Middleware]: POST /dashboard (Action ID: 40918c9095f6fecaac917459a8cc29d4a76dae3c9c)
+[2026-04-22T07:34:50.832Z] [SERVER_ACTION] [Middleware]: POST /dashboard (Action ID: 402a820f9aa7c09f894b3dc64331a3bb5c4943600e)
+[2026-04-22T07:35:42.473Z] [API] [Middleware]: POST /api/auth/logout 
+[2026-04-22T07:36:29.404Z] [API] [Middleware]: POST /api/auth/login 
+[2026-04-22T07:36:42.545Z] [SERVER_ACTION] [Middleware]: POST /dashboard (Action ID: 40918c9095f6fecaac917459a8cc29d4a76dae3c9c)
+[2026-04-22T07:36:42.931Z] [SERVER_ACTION] [Middleware]: POST /dashboard (Action ID: 402a820f9aa7c09f894b3dc64331a3bb5c4943600e)
+[2026-04-22T07:40:59.396Z] [API] [Middleware]: DELETE /api/closed-days 
+[2026-04-22T07:41:03.411Z] [API] [Middleware]: POST /api/closed-days 
+[2026-04-22T07:42:05.112Z] [API] [Middleware]: POST /api/closed-days 
+[2026-04-22T07:42:31.191Z] [API] [Middleware]: DELETE /api/closed-days 

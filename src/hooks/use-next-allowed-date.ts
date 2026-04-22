@@ -15,6 +15,9 @@ export function useNextAllowedDate({
 }: UseNextAllowedDateProps) {
   const [lastSaleDate, setLastSaleDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refresh = () => setRefreshKey(prev => prev + 1);
 
   const isBranchManager = userRole?.toLowerCase() === "branch";
   const shouldRestrict = isBranchManager && !isEditMode && branchId;
@@ -52,7 +55,7 @@ export function useNextAllowedDate({
     };
 
     fetchLastSaleDate();
-  }, [shouldRestrict, branchId]);
+  }, [shouldRestrict, branchId, refreshKey]);
 
   const nextAllowedDate = useMemo(() => {
     if (!shouldRestrict || !lastSaleDate) {
@@ -71,6 +74,7 @@ export function useNextAllowedDate({
     nextAllowedDate,
     isDateRestricted: shouldRestrict,
     isLoading,
+    refresh,
   };
 }
 

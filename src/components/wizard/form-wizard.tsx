@@ -113,8 +113,8 @@ interface WizardContextType {
   addedPayments: AddedPayment[];
   setAddedPayments: React.Dispatch<React.SetStateAction<AddedPayment[]>>;
   // Saved records count
-  savedRecords: { [key: string]: number };
   setSavedRecords: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>;
+  refreshNextDate?: () => void;
 }
 
 const WizardContext = createContext<WizardContextType | undefined>(undefined);
@@ -165,7 +165,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({
   });
   
   // Get next allowed date for branch managers
-  const { nextAllowedDate, isDateRestricted } = useNextAllowedDate({
+  const { nextAllowedDate, isDateRestricted, refresh } = useNextAllowedDate({
     userRole,
     branchId: selectedBranchId,
     isEditMode: false,
@@ -309,8 +309,8 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({
     setAddedProducts,
     addedPayments,
     setAddedPayments,
-    savedRecords,
     setSavedRecords,
+    refreshNextDate: refresh,
   };
 
   return (
@@ -713,7 +713,7 @@ const BranchSelector: React.FC = () => {
 
 // ClosedDayToggle Component
 const ClosedDayToggle: React.FC = () => {
-  const { commonDate, selectedBranchId, isPumpClosed, setIsPumpClosed } = useWizard();
+  const { commonDate, setCommonDate, selectedBranchId, isPumpClosed, setIsPumpClosed, refreshNextDate } = useWizard();
   const [loading, setLoading] = useState(false);
   // Import toast dynamically to avoid SSR issues
   const [toast, setToast] = useState<((msg: string) => void) | null>(null);
@@ -764,6 +764,15 @@ const ClosedDayToggle: React.FC = () => {
         });
         setIsPumpClosed(true);
         toast?.(`Marked as closed for ${formatted}`);
+        
+        // Auto-advance to next date
+        const nextDay = new Date(commonDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        nextDay.setUTCHours(18, 30, 0, 0);
+        setCommonDate(nextDay);
+        
+        // Refresh allowed date for branch managers
+        if (refreshNextDate) refreshNextDate();
       }
     } catch {
       // silently ignore
