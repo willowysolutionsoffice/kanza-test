@@ -113,6 +113,7 @@ interface WizardContextType {
   addedPayments: AddedPayment[];
   setAddedPayments: React.Dispatch<React.SetStateAction<AddedPayment[]>>;
   // Saved records count
+  savedRecords: { [key: string]: number };
   setSavedRecords: React.Dispatch<React.SetStateAction<{ [key: string]: number }>>;
   refreshNextDate?: () => void;
 }
@@ -309,6 +310,7 @@ export const WizardProvider: React.FC<WizardProviderProps> = ({
     setAddedProducts,
     addedPayments,
     setAddedPayments,
+    savedRecords,
     setSavedRecords,
     refreshNextDate: refresh,
   };
