@@ -1,5 +1,5 @@
 export const APP_CONFIG = {
-  name: "Kanza Accounts",
+  name: "Willowy Accounts",
   description: "Petrol Pump Accounting System",
   version: "1.0.0",
   author: {
